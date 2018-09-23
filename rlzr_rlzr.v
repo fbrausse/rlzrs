@@ -175,6 +175,10 @@ Qed.
 Lemma diag_rlzr: (@mf_diag Q) \realizes (@mf_diag D: D ->> (prod_assembly D D)).
 Proof. by move => q a aaq _; split => [ | [_ _] [<- <-]]; [exists (q, q) | exists (a, a)]. Qed.
 
+Lemma cnst_rlzr (q': Q') (a': D'):
+	a' \is_answer_to q' -> (@mf_cnst Q Q' q') \realizes (@mf_cnst D D' a').
+Proof. by move => a'aq' q a aaq _; split => [ | _ <-]; [exists q' | exists a']. Qed.
+
 (*
 Lemma rlzr_comp_codom Q'' (D'': assembly Q'') G F (f: A ->> A') (g:  A'->> answers D''):
 	G \realizes (g|_(codom f)) -> F \realizes f -> (G o F) \realizes (g o f).
@@ -191,6 +195,5 @@ by split; first by exists d'.
 Qed.
 *)
 End realizers.
-Check fst_rlzr.
 Arguments fst_rlzr {Q} D {Q'} D'.
 Arguments snd_rlzr {Q} D {Q'} D'.

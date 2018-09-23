@@ -98,7 +98,7 @@ Context Q (D: modest_set Q) Q' (D': modest_set Q').
 Notation A := (answers D).
 Notation A' := (answers D').
 
-Lemma cmbn_rlzr (D'': modest_set D) (D''': modest_set D') (F: Q ->> Q') G f:
+Lemma cmbn_mset_rlzr (D'': modest_set D) (D''': modest_set D') (F: Q ->> Q') G f:
 	F \realizes G -> G \realizes (f: D'' ->> D''') -> F \realizes (f: cmbn_msets D'' ->> cmbn_msets D''').
 Proof.
 move => /rlzr_spec FrG /rlzr_spec Grf.
