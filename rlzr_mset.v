@@ -39,14 +39,21 @@ Proof. split; exact/F2MF_sing. Qed.
 
 Definition id_modest_set S:= modest_set.Pack (id_modest_set_mixin S).
 
+Lemma prod_ref_sing: (prod_ref D D') \is_singlevalued.
+Proof. apply /fprd_sing; split; apply ref_sing. Qed.
+
 Definition prod_modest_set_mixin: modest_set_mixin.type (prod_assembly D D').
-Proof.
-split.
-rewrite /prod_assembly/=/prod_assembly_mixin/=/ref/=.
-apply /mfpp_sing; split; apply ref_sing.
-Defined.
+Proof. by split; exact/prod_ref_sing. Defined.
 
 Canonical prod_modest_set := modest_set.Pack prod_modest_set_mixin.
+
+Lemma sum_ref_sing: (sum_ref D D') \is_singlevalued.
+Proof. exact/fsum_sing/ref_sing/ref_sing. Qed.
+
+Definition sum_modest_set_mixin: modest_set_mixin.type (sum_assembly D D').
+Proof. split; exact/sum_ref_sing. Defined.
+
+Canonical sum_modest_set := modest_set.Pack sum_modest_set_mixin.
 
 Definition combine_assembly_mixin (D'': modest_set A): assembly_mixin.type Q D''.
 Proof.

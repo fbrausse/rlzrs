@@ -28,6 +28,7 @@ Notation assembly := assembly.type.
 Notation "a \is_answer_to q" := (ref _ q a) (at level 2).
 Definition ref_sur questions (D: assembly.type questions) := (assembly_mixin.refinement_valid D).
 Arguments ref_sur {questions} {D}.
+Notation get_name x := ((cotot_spec _).1 ref_sur x).
 
 Section assemblies.
 Lemma id_sur S: (@mf_id S) \is_cototal.
@@ -42,8 +43,26 @@ Context Q (D : assembly Q) Q' (D': assembly Q').
 Notation A := (answers D).
 Notation A' := (answers D').
 
+Definition prod_ref := (ref D) ** (ref D').
+
+Lemma prod_ref_sur: prod_ref \is_cototal.
+Proof. by apply/fprd_cotot/ref_sur/ref_sur. Qed.
+
 Definition prod_assembly_mixin : assembly_mixin.type (Q * Q') (A * A').
-Proof. by exists ((ref D) ** (ref D')); apply /mfpp_cotot/ref_sur/ref_sur. Defined.
+Proof. by exists prod_ref; exact/prod_ref_sur. Defined.
 
 Canonical prod_assembly := assembly.Pack prod_assembly_mixin.
+
+Definition sum_ref:= (ref D) +s+ (ref D').
+
+Lemma sum_ref_sur: sum_ref \is_cototal.
+Proof. rewrite cotot_spec => [[a | b]] /=.
+	by have [c cna]:= get_name a; exists (inl c).
+by have [c cnab]:= get_name b; exists (inr c).
+Qed.
+
+Definition sum_assembly_mixin: assembly_mixin.type (Q + Q') (A + A').
+Proof. by exists sum_ref; exact /sum_ref_sur. Defined.
+
+Canonical sum_assembly := assembly.Pack sum_assembly_mixin.
 End assemblies.
