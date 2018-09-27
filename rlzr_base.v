@@ -92,9 +92,9 @@ Notation "f '\is_realized_by' F" := (rlzr F f) (at level 2).
 Notation "F '\realizes' f" := (rlzr F f) (at level 2).
 
 Section realizers.
-Context Q (D: assembly Q) Q' (D': assembly Q').
+Context Q (A: assembly Q) Q' (A': assembly Q').
 
-Lemma rlzr_comp Q'' (D'': assembly Q'') G F (f: D ->> D') (g: D' ->> answers D''):
+Lemma rlzr_comp Q'' (A'': assembly Q'') G F (f: A ->> A') (g: A' ->> answers A''):
 	G \realizes g -> F \realizes f -> (G o F) \realizes (g o f).
 Proof.
 move => Grg Frf q a aaq [a'' [[a' [faa' ga'a'']]] subs].
@@ -119,7 +119,15 @@ have [[z' Gpz']]:= Grg p' e' e'ap' (subs e' fae').
 by exists z'.
 Qed.
 
-Lemma F2MF_rlzr F (f: D ->> D'):
+Lemma tight_rlzr F G (f: A ->> A'): F \realizes f -> G \tightens F -> G \realizes f.
+Proof.
+move => Frf [dm val] q a qna afd.
+have [qfd prp]:= Frf q a qna afd.
+split => [ | q' Gqq']; first by apply dm.
+by have:= prp q' (val q qfd q' Gqq').
+Qed.
+
+Lemma F2MF_rlzr F (f: A ->> A'):
 	(F2MF F) \realizes f <->
 	(forall q a, a \is_answer_to q -> a \from_dom f ->
 		exists a', a' \is_answer_to (F q) /\ f a a').
@@ -132,7 +140,7 @@ have [ | d' [d'aq' fad']]:= rlzr q a aaq; first by exists a'.
 by exists d'; rewrite -eq.
 Qed.
 
-Lemma F2MF_rlzr_F2MF F (f: D -> D') :
+Lemma F2MF_rlzr_F2MF F (f: A -> A') :
 	(F2MF F) \realizes (F2MF f) <-> forall q a, a \is_answer_to q -> (f a) \is_answer_to (F q).
 Proof.
 rewrite F2MF_rlzr.
@@ -140,11 +148,11 @@ split => ass phi x phinx; last by exists (f x); split => //; apply ass.
 by have [ | fx [cd ->]]:= ass phi x phinx; first by apply F2MF_tot.
 Qed.
 
-Lemma rlzr_dom (f: D ->> D') F:
+Lemma rlzr_dom (f: A ->> A') F:
 	F \realizes f -> forall q a, a \is_answer_to q -> a \from_dom f -> q \from_dom F.
 Proof. by move => rlzr q a aaq afd; have [ex prp]:= rlzr q a aaq afd. Qed.
 
-Lemma rlzr_val_sing (f: D ->> D') F: f \is_singlevalued -> F \realizes f ->
+Lemma rlzr_val_sing (f: A ->> A') F: f \is_singlevalued -> F \realizes f ->
 	forall q a q' a', a \is_answer_to q -> f a a' -> F q q' -> a' \is_answer_to q'.
 Proof.
 move => sing rlzr q a q' a' aaq faa' Fqq'.
@@ -153,7 +161,7 @@ have [d' [d'aq' fad']]:= prp q' Fqq'.
 by rewrite (sing a a' d').
 Qed.
 
-Lemma sing_rlzr (f: D ->> D') F: F \is_singlevalued -> f \is_singlevalued ->
+Lemma sing_rlzr (f: A ->> A') F: F \is_singlevalued -> f \is_singlevalued ->
 	F \realizes f
 	<->
 	(forall q a, a \is_answer_to q -> a \from_dom f -> q \from_dom F)
@@ -168,7 +176,7 @@ move: afd => [a' faa'].
 by exists a'; split => //; apply /cnd/Fqq'/faa'.
 Qed.
 
-Lemma rlzr_F2MF F (f: D -> D'):
+Lemma rlzr_F2MF F (f: A -> A'):
 	F \realizes (F2MF f)
 	<->
 	forall q a, a \is_answer_to q -> q \from_dom F

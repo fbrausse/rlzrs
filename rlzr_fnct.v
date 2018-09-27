@@ -10,7 +10,6 @@ Unset Printing Implicit Defensive.
 Section realizers.
 Context Q (D: assembly Q) Q' (D': assembly Q').
 
-Check cmbn_smbly.
 Lemma cmbn_smbly_rlzr (D'': assembly D) (D''': assembly D') F G f:
 	F \realizes G -> G \realizes f -> F \realizes (f: cmbn_smbly D'' ->> cmbn_smbly D''').
 Proof.
