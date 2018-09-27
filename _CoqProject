@@ -1,6 +1,7 @@
 -R . rlzrs
+rlzr_base.v
 rlzr_smbly.v
-rlzr_rlzr.v
+rlzr_fnct.v
 rlzr_mset.v
 all_rlzr.v
 

@@ -1,34 +1,11 @@
 From mathcomp Require Import all_ssreflect.
 From mpf Require Import all_mf.
+Require Import rlzr_base.
 Import Morphisms.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-
-Module assembly_mixin.
-Structure type Q A := Pack {
-refinement: Q ->> A;
-refinement_valid : refinement \is_cototal;
-}.
-End assembly_mixin.
-
-Module assembly.
-Structure type (questions: Type):= Pack {
-answers:> Type;
-mixin: assembly_mixin.type questions answers;
-}.
-End assembly.
-Coercion assembly.answers: assembly.type >-> Sortclass.
-Coercion assembly.mixin : assembly.type >-> assembly_mixin.type.
-Notation answers := assembly.answers.
-Definition ref questions (C: assembly.type questions) :=
-	assembly_mixin.refinement (assembly.mixin C).
-Notation assembly := assembly.type.
-Notation "a \is_answer_to q" := (ref _ q a) (at level 2).
-Definition ref_sur questions (D: assembly.type questions) := (assembly_mixin.refinement_valid D).
-Arguments ref_sur {questions} {D}.
-Notation get_name x := ((cotot_spec _).1 ref_sur x).
 
 Section assemblies.
 Lemma id_sur S: (@mf_id S) \is_cototal.
@@ -39,11 +16,25 @@ Proof. exists mf_id; exact/id_sur. Defined.
 
 Definition id_assembly S:= assembly.Pack (id_assembly_mixin S).
 
-Context Q (D : assembly Q) Q' (D': assembly Q').
-Notation A := (answers D).
-Notation A' := (answers D').
+Context Q (A : assembly Q).
 
-Definition prod_ref := (ref D) ** (ref D').
+Definition comp_ref (D: assembly A):= (ref D) o_R (ref A).
+
+Lemma comp_ref_sur (D: assembly A): (comp_ref D) \is_cototal.
+Proof.
+rewrite cotot_spec => d''.
+have [d dnd'']:= get_name d''.
+have [q qnd]:= get_name d.
+by exists q; exists d.
+Qed.
+
+Definition combine_assembly_mixin (D: assembly A): assembly_mixin.type Q D.
+Proof. exists (comp_ref D); exact/comp_ref_sur. Defined.
+
+Canonical cmbn_smbly (D: assembly A) := assembly.Pack (combine_assembly_mixin D).
+
+Context Q' (A': assembly Q').
+Definition prod_ref := (ref A) ** (ref A').
 
 Lemma prod_ref_sur: prod_ref \is_cototal.
 Proof. by apply/fprd_cotot/ref_sur/ref_sur. Qed.
@@ -53,7 +44,7 @@ Proof. by exists prod_ref; exact/prod_ref_sur. Defined.
 
 Canonical prod_assembly := assembly.Pack prod_assembly_mixin.
 
-Definition sum_ref:= (ref D) +s+ (ref D').
+Definition sum_ref:= (ref A) +s+ (ref A').
 
 Lemma sum_ref_sur: sum_ref \is_cototal.
 Proof. rewrite cotot_spec => [[a | b]] /=.

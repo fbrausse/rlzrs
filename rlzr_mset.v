@@ -1,6 +1,6 @@
 From mathcomp Require Import all_ssreflect.
 From mpf Require Import all_mf.
-Require Import rlzr_smbly rlzr_rlzr.
+Require Import rlzr_base rlzr_smbly rlzr_fnct.
 Import Morphisms.
 Require Import FunctionalExtensionality.
 
@@ -8,68 +8,48 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Module modest_set_mixin.
-Structure type Q (D: assembly.type Q):= Pack {
-refinement_singlevalued : (ref D) \is_singlevalued;
-}.
-End modest_set_mixin.
-
-Module modest_set.
-Structure type Q:= Pack {
-D :> assembly Q;
-mixin: modest_set_mixin.type D;
-}.
-End modest_set.
-Coercion modest_set.D: modest_set.type >-> assembly.
-Coercion modest_set.mixin: modest_set.type >-> modest_set_mixin.type.
-Notation modest_set := (modest_set.type).
-Canonical make_modest_set Q (D: assembly Q) (mixin: modest_set_mixin.type D) :=
-	modest_set.Pack mixin.
-Definition ref_sing Q (D: modest_set Q) :=
-	(@modest_set_mixin.refinement_singlevalued Q D D).
-Arguments ref_sing {Q} {D}.
-
 Section modest_sets.
-Context Q (D: modest_set Q) Q' (D': modest_set Q').
-Notation A := (answers D).
-Notation A' := (answers D').
+Context Q (A: modest_set Q).
 
 Definition id_modest_set_mixin S: modest_set_mixin.type (id_assembly S).
 Proof. split; exact/F2MF_sing. Qed.
 
 Definition id_modest_set S:= modest_set.Pack (id_modest_set_mixin S).
 
-Lemma prod_ref_sing: (prod_ref D D') \is_singlevalued.
-Proof. apply /fprd_sing; split; apply ref_sing. Qed.
-
-Definition prod_modest_set_mixin: modest_set_mixin.type (prod_assembly D D').
-Proof. by split; exact/prod_ref_sing. Defined.
-
-Canonical prod_modest_set := modest_set.Pack prod_modest_set_mixin.
-
-Lemma sum_ref_sing: (sum_ref D D') \is_singlevalued.
-Proof. exact/fsum_sing/ref_sing/ref_sing. Qed.
-
-Definition sum_modest_set_mixin: modest_set_mixin.type (sum_assembly D D').
-Proof. split; exact/sum_ref_sing. Defined.
-
-Canonical sum_modest_set := modest_set.Pack sum_modest_set_mixin.
-
-Definition combine_assembly_mixin (D'': modest_set A): assembly_mixin.type Q D''.
+Lemma comp_ref_sing (D: modest_set A): (comp_ref D) \is_singlevalued.
 Proof.
-exists ((ref D'') o (ref D)).
-by apply/comp_cotot; try apply /ref_sur; apply ref_sing.
-Defined.
+move => q a a' [d [qnd dna]] [d' [qnd' d'na]].
+rewrite (ref_sing q d d') in dna => //.
+by rewrite (ref_sing d' a a').
+Qed.
 
-Definition combine_modest_set_mixin (D'': modest_set A):
-	modest_set_mixin.type (assembly.Pack (@combine_assembly_mixin D'')).
-Proof. by split => /=; apply/comp_sing/ref_sing/ref_sing. Qed.
+Definition combine_modest_set_mixin (D: modest_set A):
+	modest_set_mixin.type (@cmbn_smbly Q A D).
+Proof. by split; exact/comp_ref_sing. Defined.
 
 Canonical cmbn_msets (D'': modest_set A) :=
 	modest_set.Pack (@combine_modest_set_mixin D'').
 
+Context  Q' (A': modest_set Q').
+
+Lemma prod_ref_sing: (prod_ref A A') \is_singlevalued.
+Proof. apply /fprd_sing; split; apply ref_sing. Qed.
+
+Definition prod_modest_set_mixin: modest_set_mixin.type (prod_assembly A A').
+Proof. by split; exact/prod_ref_sing. Defined.
+
+Canonical prod_modest_set := modest_set.Pack prod_modest_set_mixin.
+
+Lemma sum_ref_sing: (sum_ref A A') \is_singlevalued.
+Proof. exact/fsum_sing/ref_sing/ref_sing. Qed.
+
+Definition sum_modest_set_mixin: modest_set_mixin.type (sum_assembly A A').
+Proof. split; exact/sum_ref_sing. Defined.
+
+Canonical sum_modest_set := modest_set.Pack sum_modest_set_mixin.
+
 Lemma rlzr_spec (F: Q ->> Q') f:
-	F \realizes f <-> ((ref D') o F) \tightens (f o (ref D)).
+	F \realizes f <-> ((ref A') o F) \tightens (f o (ref A)).
 Proof.
 split => [Frf | [dm val]].
 	split => q [a' [[a [aaq faa']] subs]].
@@ -89,7 +69,7 @@ split => [ | q' Fqq'].
 	exists a'; split; first by exists a.
 	move => d daq.
 	by exists a'; rewrite (ref_sing q d a).
-have qfd: q \from_dom (f o (ref D)).
+have qfd: q \from_dom (f o (ref A)).
 	exists a'; split; first by exists a.
 	move => d daq.
 	by exists a'; rewrite (ref_sing q d a).
@@ -101,19 +81,11 @@ Qed.
 End modest_sets.
 
 Section realizer_functions.
-Context Q (D: modest_set Q) Q' (D': modest_set Q').
-Notation A := (answers D).
-Notation A' := (answers D').
+Context Q (A: modest_set Q) Q' (A': modest_set Q').
 
-Lemma cmbn_mset_rlzr (D'': modest_set D) (D''': modest_set D') (F: Q ->> Q') G f:
-	F \realizes G -> G \realizes (f: D'' ->> D''') -> F \realizes (f: cmbn_msets D'' ->> cmbn_msets D''').
-Proof.
-move => /rlzr_spec FrG /rlzr_spec Grf.
-rewrite rlzr_spec /ref/=.
-rewrite comp_assoc -(comp_assoc f).
-apply /tight_trans; first by apply /tight_comp_l/Grf.
-rewrite comp_assoc; apply /tight_comp_r/FrG.
-Qed.
+Lemma cmbn_mset_rlzr (D: modest_set A) (D': modest_set A') (F: Q ->> Q') G f:
+	F \realizes G -> G \realizes (f: D ->> D') -> F \realizes (f: cmbn_msets D ->> cmbn_msets D').
+Proof. exact/cmbn_smbly_rlzr. Qed.
 
 Definition	ftrnsln (f: A -> A') := trnsln (F2MF f).
 Notation "f \is_translation_function" := (ftrnsln f) (at level 2).
@@ -151,7 +123,7 @@ Qed.
 Lemma frlzr_cotot (someq': Q'): frlzr \is_cototal.
 Proof.
 move => f.
-pose F := make_mf (fun q Fq => forall a, (ref D) q a -> (ref D') Fq (f a)).
+pose F := make_mf (fun q Fq => forall a, (ref A) q a -> (ref A') Fq (f a)).
 split => // _; exists F; split => //.
 rewrite /frlzr /= rlzr_F2MF => q a qaa.
 split => [ | Fq FqFq]; last by apply FqFq.

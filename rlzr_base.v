@@ -1,11 +1,55 @@
 From mathcomp Require Import all_ssreflect.
 From mpf Require Import all_mf.
-Require Import rlzr_smbly.
 Import Morphisms.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+
+Module assembly_mixin.
+Structure type Q A := Pack {
+refinement: Q ->> A;
+refinement_valid : refinement \is_cototal;
+}.
+End assembly_mixin.
+
+Module assembly.
+Structure type (questions: Type):= Pack {
+answers:> Type;
+mixin: assembly_mixin.type questions answers;
+}.
+End assembly.
+Coercion assembly.answers: assembly.type >-> Sortclass.
+Coercion assembly.mixin : assembly.type >-> assembly_mixin.type.
+Notation answers := assembly.answers.
+Definition ref questions (C: assembly.type questions) :=
+	assembly_mixin.refinement (assembly.mixin C).
+Notation assembly := assembly.type.
+Notation "a \is_answer_to q" := (ref _ q a) (at level 2).
+Definition ref_sur questions (D: assembly.type questions) := (assembly_mixin.refinement_valid D).
+Arguments ref_sur {questions} {D}.
+Notation get_name x := ((cotot_spec _).1 ref_sur x).
+
+Module modest_set_mixin.
+Structure type Q (D: assembly.type Q):= Pack {
+refinement_singlevalued : (ref D) \is_singlevalued;
+}.
+End modest_set_mixin.
+
+Module modest_set.
+Structure type Q:= Pack {
+D :> assembly Q;
+mixin: modest_set_mixin.type D;
+}.
+End modest_set.
+Coercion modest_set.D: modest_set.type >-> assembly.
+Coercion modest_set.mixin: modest_set.type >-> modest_set_mixin.type.
+Notation modest_set := (modest_set.type).
+Canonical make_modest_set Q (D: assembly Q) (mixin: modest_set_mixin.type D) :=
+	modest_set.Pack mixin.
+Definition ref_sing Q (D: modest_set Q) :=
+	(@modest_set_mixin.refinement_singlevalued Q D D).
+Arguments ref_sing {Q} {D}.
 
 Section realizer.
 Context Q (D: assembly Q) Q' (D': assembly Q').
@@ -13,7 +57,6 @@ Context Q (D: assembly Q) Q' (D': assembly Q').
 Definition rlzr (F: Q ->> Q') (f: D ->> D') :=
 		(forall q a, a \is_answer_to q -> a \from_dom f -> q \from_dom F /\
 		forall q', F q q' -> exists a', a' \is_answer_to q' /\ f a a').
-Notation "f '\is_realized_by' F" := (rlzr F f) (at level 2).
 Notation "F '\realizes' f" := (rlzr F f) (at level 2).
 
 Global Instance rlzr_prpr:
@@ -43,6 +86,37 @@ move => f g eq; rewrite /trnsln.
 split; move => [F].
 	by exists F; rewrite -eq.
 by exists F; rewrite eq.
+Qed.
+End realizer.
+Notation "f '\is_realized_by' F" := (rlzr F f) (at level 2).
+Notation "F '\realizes' f" := (rlzr F f) (at level 2).
+
+Section realizers.
+Context Q (D: assembly Q) Q' (D': assembly Q').
+
+Lemma rlzr_comp Q'' (D'': assembly Q'') G F (f: D ->> D') (g: D' ->> answers D''):
+	G \realizes g -> F \realizes f -> (G o F) \realizes (g o f).
+Proof.
+move => Grg Frf q a aaq [a'' [[a' [faa' ga'a'']]] subs].
+split; last first.
+	move => q'' [[q' [Fqq' Gq'q'']] subs'].
+	have afd: a \from_dom f by exists a'.
+	have [_ prp]:= Frf q a aaq afd.
+	have [d' [d'aq' fad']]:= prp q' Fqq'.
+	have [_ prp']:= Grg q' d' d'aq' (subs d' fad').
+	have [d'' [d''aq'' gd'd'']]:= prp' q'' Gq'q''.
+	exists d''; split => //.
+	by split; first by exists d'.
+have afd: a \from_dom f by exists a'.
+have [[q' Fqq'] prp]:= Frf q a aaq afd.
+have [d' [d'aq' fad']]:= prp q' Fqq'.
+have [[q'' Gq'q''] prp']:= Grg q' d' d'aq' (subs d' fad').
+have [d'' [d''aq'' gd'd'']]:= prp' q'' Gq'q''.
+exists q''; split; first by exists q'.
+move => p' Fqp'.
+have [e' [e'ap' fae']]:= prp p' Fqp'.
+have [[z' Gpz']]:= Grg p' e' e'ap' (subs e' fae').
+by exists z'.
 Qed.
 
 Lemma F2MF_rlzr F (f: D ->> D'):
@@ -107,93 +181,8 @@ split => [ | rlzr q a aaq _].
 split => [ | q' Fqq']; first by have []:= rlzr q a aaq.
 by exists (f a); split => //; apply (rlzr q a aaq).2.
 Qed.
-
-End realizer.
+End realizers.
 Notation "f '\is_realized_by' F" := (rlzr F f) (at level 2).
 Notation "F '\realizes' f" := (rlzr F f) (at level 2).
 Notation "f \is_translation" := (trnsln f) (at level 2).
 
-Section realizers.
-Context Q (D: assembly Q) Q' (D': assembly Q').
-
-Lemma rlzr_comp Q'' (D'': assembly Q'') G F (f: D ->> D') (g: D' ->> answers D''):
-	G \realizes g -> F \realizes f -> (G o F) \realizes (g o f).
-Proof.
-move => Grg Frf q a aaq [a'' [[a' [faa' ga'a'']]] subs].
-split; last first.
-	move => q'' [[q' [Fqq' Gq'q'']] subs'].
-	have afd: a \from_dom f by exists a'.
-	have [_ prp]:= Frf q a aaq afd.
-	have [d' [d'aq' fad']]:= prp q' Fqq'.
-	have [_ prp']:= Grg q' d' d'aq' (subs d' fad').
-	have [d'' [d''aq'' gd'd'']]:= prp' q'' Gq'q''.
-	exists d''; split => //.
-	by split; first by exists d'.
-have afd: a \from_dom f by exists a'.
-have [[q' Fqq'] prp]:= Frf q a aaq afd.
-have [d' [d'aq' fad']]:= prp q' Fqq'.
-have [[q'' Gq'q''] prp']:= Grg q' d' d'aq' (subs d' fad').
-have [d'' [d''aq'' gd'd'']]:= prp' q'' Gq'q''.
-exists q''; split; first by exists q'.
-move => p' Fqp'.
-have [e' [e'ap' fae']]:= prp p' Fqp'.
-have [[z' Gpz']]:= Grg p' e' e'ap' (subs e' fae').
-by exists z'.
-Qed.
-
-Lemma mfpp_rlzr Q'' (D'': assembly Q'') Q''' (D''': assembly Q''')
-	F (f: D ->> D') G (g: D'' ->> D'''):
-	F \realizes f -> G \realizes g -> (F ** G) \realizes (f ** g).
-Proof.
-move => Frf Grg [q q''] [a a''] [/=aaq a''aq''] [[a' a''']] [/=faa' ga''a'''].
-have afd: a \from_dom f by exists a'.
-have afd': a'' \from_dom g by exists a'''.
-have [ex prp]:= Frf q a aaq afd.
-have [ex' prp']:= Grg q'' a'' a''aq'' afd'.
-split => [ | [q' q'''] /= [Fqq' Gq''q''']]; last first.
-	 have [d' [d'aq' fad']]:= prp q' Fqq'.
-	 have [d''' [d'''aq''' ga''d''']]:= prp' q''' Gq''q'''.
-	 by exists (d', d''').
-have [q' Fqq']:= ex; have [q''' Gq''q''']:= ex'.
-by exists (q', q''').
-Qed.
-
-Lemma fst_rlzr:
-	(@mf_fst Q Q') \realizes (@mf_fst D D': (prod_assembly D D') ->> D).
-Proof.
-move => [q1 q2] a [/=aaq1 aaq2] ex; split; first by exists q1.
-by move => q' <-; exists a.1.
-Qed.
-
-Lemma snd_rlzr:
-	(@mf_snd Q Q') \realizes (@mf_snd D D': (prod_assembly D D') ->> D').
-Proof.
-move => [q1 q2] a [/=aaq1 aaq2] ex; split; first by exists q2.
-by move => q' <-; exists a.2.
-Qed.
-
-Lemma diag_rlzr: (@mf_diag Q) \realizes (@mf_diag D: D ->> (prod_assembly D D)).
-Proof. by move => q a aaq _; split => [ | [_ _] [<- <-]]; [exists (q, q) | exists (a, a)]. Qed.
-
-Lemma cnst_rlzr (q': Q') (a': D'):
-	a' \is_answer_to q' -> (@mf_cnst Q Q' q') \realizes (@mf_cnst D D' a').
-Proof. by move => a'aq' q a aaq _; split => [ | _ <-]; [exists q' | exists a']. Qed.
-
-(*
-Lemma rlzr_comp_codom Q'' (D'': assembly Q'') G F (f: A ->> A') (g:  A'->> answers D''):
-	G \realizes (g|_(codom f)) -> F \realizes f -> (G o F) \realizes (g o f).
-Proof.
-move => rlzr rlzr' q a aaq [a'' [[a' [faa' ga'a'']] subs]] q'' [[q' [Fqq' Gq'q'']] subs'].
-have afd: a \from_dom f by exists a'.
-have [d' [d'aq' fad']]:= rlzr' q a aaq afd q' Fqq'.
-have afd': d' \from_dom (g|_(codom f)).
-	have [b gbd']:= subs d' fad'.
-	by exists b; split; first by exists a.
-have [d'' [d''aq'' [d'fd gd'd'']]]:= rlzr q' d' d'aq' afd' q'' Gq'q''.
-exists d''; split => //.
-by split; first by exists d'.
-Qed.
-*)
-End realizers.
-Arguments fst_rlzr {Q} D {Q'} D'.
-Arguments snd_rlzr {Q} D {Q'} D'.
