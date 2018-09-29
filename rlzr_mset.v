@@ -12,9 +12,9 @@ Section modest_sets.
 Context Q (A: modest_set Q).
 
 Definition id_modest_set_mixin S: modest_set_mixin.type (id_assembly S).
-Proof. split; exact/F2MF_sing. Qed.
+Proof. split; exact/F2MF_sing. Defined.
 
-Definition id_modest_set S:= modest_set.Pack (id_modest_set_mixin S).
+Definition id_modest_set S:= @modest_set.Pack S (id_assembly S) (id_modest_set_mixin S).
 
 Lemma comp_ref_sing (D: modest_set A): (comp_ref D) \is_singlevalued.
 Proof.
@@ -80,12 +80,32 @@ exists e'; rewrite (ref_sing q a d) => //; split => //.
 Qed.
 End modest_sets.
 
+Section mf_realizer.
+Context Q (A: modest_set Q) Q' (A': assembly Q').
+Definition mf_rlzr := make_mf (fun F (f: A ->> A') => F \realizes f).
+
+Lemma rlzr_sur: mf_rlzr \is_cototal.
+Proof.
+rewrite cotot_spec => f.
+exists (make_mf (fun q Fq => forall a, a \is_answer_to q -> exists fa, fa \is_answer_to Fq /\ f a fa)).
+move => q a qna [fa fafa]; split.
+	have [Fq Fqnfa]:= get_name fa.
+	exists Fq => a' qna'.
+	exists fa; split => //.
+	by rewrite (ref_sing q a' a).
+move => q' /=Fqq'.
+have [a' [q'na' faa']]:= Fqq' a qna.
+by exists a'.
+Qed.
+
+Definition mf_rlzr_assembly_mixin : assembly_mixin.type (Q ->> Q') (A ->> A').
+Proof. exists mf_rlzr; exact rlzr_sur. Defined.
+
+Canonical rlzr_smbly := assembly.Pack mf_rlzr_assembly_mixin.
+End mf_realizer.
+
 Section realizer_functions.
 Context Q (A: modest_set Q) Q' (A': modest_set Q').
-
-Lemma cmbn_mset_rlzr (D: modest_set A) (D': modest_set A') (F: Q ->> Q') G f:
-	F \realizes G -> G \realizes (f: D ->> D') -> F \realizes (f: cmbn_msets D ->> cmbn_msets D').
-Proof. exact/cmbn_smbly_rlzr. Qed.
 
 Definition	ftrnsln (f: A -> A') := trnsln (F2MF f).
 Notation "f \is_translation_function" := (ftrnsln f) (at level 2).
@@ -100,15 +120,19 @@ apply/ tight_trans; first by apply rlzr.
 exact/ tight_comp_r/icf_F2MF_tight.
 Qed.
 
-Lemma tight_rlzr G F (f: A ->> A'):
-	G \tightens F -> F \realizes f -> G \realizes f.
+Definition mf_frlzr := make_mf (fun F (f: A -> A') => F \realizes (F2MF f)).
+
+Lemma mf_frlzr_sur: mf_frlzr \is_cototal.
 Proof.
-by rewrite !rlzr_spec => GtF Frf; apply/ tight_trans; [apply Frf | apply/tight_comp_r/ GtF].
+rewrite cotot_spec => [f].
+have [ | F [_ Frf]]//:= (rlzr_sur (F2MF f)).2.
+by exists F.
 Qed.
 
-Definition frlzr := make_mf (fun F (f: A -> A') => F \realizes (F2MF f)).
+Definition mf_frlzr_assembly_mixin: assembly_mixin.type (Q ->> Q') (A -> A').
+Proof. exists mf_frlzr; exact/mf_frlzr_sur. Defined.
 
-Lemma frlzr_sing: frlzr \is_singlevalued.
+Lemma mf_frlzr_sing: mf_frlzr \is_singlevalued.
 Proof.
 move => F f g /rlzr_F2MF Frf /rlzr_F2MF Frg.
 apply functional_extensionality => a.
@@ -120,24 +144,25 @@ specialize (prp' Fq FqFq).
 by rewrite (ref_sing Fq (f a) (g a)).
 Qed.
 
-Lemma frlzr_cotot (someq': Q'): frlzr \is_cototal.
+Definition mf_frlzr_modest_set_mixin:
+	modest_set_mixin.type (assembly.Pack mf_frlzr_assembly_mixin).
+Proof. split; exact/mf_frlzr_sing. Defined.
+
+Definition frlzr := make_mf (fun F (f: A -> A') => (F2MF F) \realizes (F2MF f)).
+
+From mpf Require Import choice_mf.
+Lemma frlzr_sur (q': Q'): frlzr \is_cototal.
 Proof.
-move => f.
-pose F := make_mf (fun q Fq => forall a, (ref A) q a -> (ref A') Fq (f a)).
-split => // _; exists F; split => //.
-rewrite /frlzr /= rlzr_F2MF => q a qaa.
-split => [ | Fq FqFq]; last by apply FqFq.
-have [  | Fq [_ Fqnfa]] //:= (ref_sur (f a)).2.
-by exists Fq => a' qaa'; rewrite (ref_sing q a' a).
+rewrite cotot_spec => [f].
+have [ | F [_ Frf]]//:= (rlzr_sur (F2MF f)).2.
+have [g gcF]:= exists_choice F q'.
+by exists g; apply /icf_rlzr/gcF.
 Qed.
 
-Lemma frlzr_sur (someq': Q'): frlzr \is_cototal.
-Proof. exact: frlzr_cotot. Qed.
+Definition frlzr_assembly_mixin (q': Q'): assembly_mixin.type (Q -> Q') (A -> A').
+Proof. exists frlzr; exact/(frlzr_sur q'). Defined.
 
-Lemma frlzr_sur_par_fun (someq': Q'): frlzr \is_surjective_partial_function.
-Proof. split; [exact: frlzr_sing | exact: frlzr_sur]. Qed.
-
+Lemma frlzr_sing: mf_frlzr \is_singlevalued.
+Proof. by move => F f g Frf Frg; exact/(mf_frlzr_sing Frf Frg). Qed.
 End realizer_functions.
-Notation "f '\is_realized_by' F" := (rlzr F f) (at level 2).
-Notation "F '\realizes' f" := (rlzr F f) (at level 2).
 Notation "f '\is_transation'" := (trnsln f) (at level 2).

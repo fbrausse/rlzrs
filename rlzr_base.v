@@ -31,32 +31,32 @@ Arguments ref_sur {questions} {D}.
 Notation get_name x := ((cotot_spec _).1 ref_sur x).
 
 Module modest_set_mixin.
-Structure type Q (D: assembly.type Q):= Pack {
-refinement_singlevalued : (ref D) \is_singlevalued;
+Structure type Q (A: assembly.type Q):= Pack {
+refinement_singlevalued : (ref A) \is_singlevalued;
 }.
 End modest_set_mixin.
 
 Module modest_set.
 Structure type Q:= Pack {
-D :> assembly Q;
-mixin: modest_set_mixin.type D;
+A :> assembly Q;
+mixin: modest_set_mixin.type A;
 }.
 End modest_set.
-Coercion modest_set.D: modest_set.type >-> assembly.
+Coercion modest_set.A: modest_set.type >-> assembly.
 Coercion modest_set.mixin: modest_set.type >-> modest_set_mixin.type.
 Notation modest_set := (modest_set.type).
 Canonical make_modest_set Q (D: assembly Q) (mixin: modest_set_mixin.type D) :=
 	modest_set.Pack mixin.
-Definition ref_sing Q (D: modest_set Q) :=
-	(@modest_set_mixin.refinement_singlevalued Q D D).
-Arguments ref_sing {Q} {D}.
+Definition ref_sing Q (A: modest_set Q) :=
+	(@modest_set_mixin.refinement_singlevalued Q A A).
+Arguments ref_sing {Q} {A}.
 
 Section realizer.
 Context Q (D: assembly Q) Q' (D': assembly Q').
 
 Definition rlzr (F: Q ->> Q') (f: D ->> D') :=
 		(forall q a, a \is_answer_to q -> a \from_dom f -> q \from_dom F /\
-		forall q', F q q' -> exists a', a' \is_answer_to q' /\ f a a').
+		forall Fq, F q Fq -> exists fa, fa \is_answer_to Fq /\ f a fa).
 Notation "F '\realizes' f" := (rlzr F f) (at level 2).
 
 Global Instance rlzr_prpr:
@@ -117,6 +117,15 @@ move => p' Fqp'.
 have [e' [e'ap' fae']]:= prp p' Fqp'.
 have [[z' Gpz']]:= Grg p' e' e'ap' (subs e' fae').
 by exists z'.
+Qed.
+
+Lemma rlzr_tight F f (g: A ->> A'): F \realizes f -> f \tightens g -> F \realizes g.
+Proof.
+move => Frf [dm val] q a qna afd.
+have [qfd prp]:= Frf q a qna (dm a afd).
+split => // q' Fqq'.
+have [a' []]:= prp q' Fqq'.
+by exists a'; split => //; apply val.
 Qed.
 
 Lemma tight_rlzr F G (f: A ->> A'): F \realizes f -> G \tightens F -> G \realizes f.
@@ -193,4 +202,3 @@ End realizers.
 Notation "f '\is_realized_by' F" := (rlzr F f) (at level 2).
 Notation "F '\realizes' f" := (rlzr F f) (at level 2).
 Notation "f \is_translation" := (trnsln f) (at level 2).
-
