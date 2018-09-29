@@ -4,4 +4,5 @@ rlzr_ntrvw.v
 rlzr_fnct.v
 rlzr_dict.v
 all_rlzr.v
-
+cdic_count.v
+cdic_dscr.v
