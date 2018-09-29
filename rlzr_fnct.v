@@ -8,7 +8,12 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Section realizers.
-Context Q (D: assembly Q) Q' (D': assembly Q').
+Context Q (D: assembly Q).
+
+Lemma id_rlzr: (@mf_id Q) \realizes (@mf_id D).
+Proof. by move => q a qna [d /= eq]; split => [ | _ <-]; [exists q | exists a]. Qed.
+
+Context Q' (D': assembly Q').
 
 Lemma cmbn_smbly_rlzr (D'': assembly D) (D''': assembly D') F G f:
 	F \realizes G -> G \realizes f -> F \realizes (f: cmbn_smbly D'' ->> cmbn_smbly D''').
