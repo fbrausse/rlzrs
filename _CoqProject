@@ -1,8 +1,8 @@
 -R . rlzrs
-rlzr_base.v
-rlzr_ntrvw.v
-rlzr_fnct.v
-rlzr_dict.v
-all_rlzr.v
+cdic_base.v
+cdic_ntrvw.v
+cdic_fnct.v
+cdic_dict.v
+all_dict.v
 cdic_count.v
 cdic_dscr.v
