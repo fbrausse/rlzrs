@@ -6,61 +6,65 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Module assembly_mixin.
-Structure type Q A := Pack {
-refinement: Q ->> A;
-refinement_valid : refinement \is_cototal;
+Module interview_mixin.
+Structure type questions answers := Pack {
+conversation: questions ->> answers;
+only_respond : conversation \is_cototal;
 }.
-End assembly_mixin.
+End interview_mixin.
 
-Module assembly.
+Module interview.
 Structure type (questions: Type):= Pack {
 answers:> Type;
-mixin: assembly_mixin.type questions answers;
+mixin: interview_mixin.type questions answers;
 }.
-End assembly.
-Coercion assembly.answers: assembly.type >-> Sortclass.
-Coercion assembly.mixin : assembly.type >-> assembly_mixin.type.
-Notation answers := assembly.answers.
-Definition ref questions (C: assembly.type questions) :=
-	assembly_mixin.refinement (assembly.mixin C).
-Notation assembly := assembly.type.
-Notation "a \is_answer_to q" := (ref _ q a) (at level 2).
-Definition ref_sur questions (D: assembly.type questions) := (assembly_mixin.refinement_valid D).
-Arguments ref_sur {questions} {D}.
-Notation get_name x := ((cotot_spec _).1 ref_sur x).
+End interview.
+Coercion interview.answers: interview.type >-> Sortclass.
+Coercion interview.mixin : interview.type >-> interview_mixin.type.
+Definition conversation Q (C: interview.type Q) :=
+	interview_mixin.conversation (interview.mixin C).
+Notation "a '\is_response_to' q 'in' C" := (conversation C q a) (at level 2).
+Notation "a \is_response_to q" := (a \is_response_to  q in _) (at level 2).
+Definition only_respond Q (A: interview.type Q) := (interview_mixin.only_respond A).
+Arguments only_respond {Q} {A}.
+Notation get_question a := ((cotot_spec _).1 only_respond a).
+Notation interview := interview.type.
 
-Module modest_set_mixin.
-Structure type Q (A: assembly.type Q):= Pack {
-refinement_singlevalued : (ref A) \is_singlevalued;
+Module dictionary_mixin.
+Structure type Q (A: interview.type Q):= Pack {
+answer_unique: (conversation A) \is_singlevalued;
 }.
-End modest_set_mixin.
+End dictionary_mixin.
 
-Module modest_set.
+Module dictionary.
 Structure type Q:= Pack {
-A :> assembly Q;
-mixin: modest_set_mixin.type A;
+A :> interview Q;
+mixin: dictionary_mixin.type A;
 }.
-End modest_set.
-Coercion modest_set.A: modest_set.type >-> assembly.
-Coercion modest_set.mixin: modest_set.type >-> modest_set_mixin.type.
-Notation modest_set := (modest_set.type).
-Canonical make_modest_set Q (D: assembly Q) (mixin: modest_set_mixin.type D) :=
-	modest_set.Pack mixin.
-Definition ref_sing Q (A: modest_set Q) :=
-	(@modest_set_mixin.refinement_singlevalued Q A A).
-Arguments ref_sing {Q} {A}.
+End dictionary.
+Coercion dictionary.A: dictionary.type >-> interview.type.
+Coercion	dictionary.mixin: dictionary.type >-> dictionary_mixin.type.
+Notation dictionary := (dictionary.type).
+Canonical make_modest_set Q (D: interview Q) (mixin: dictionary_mixin.type D) :=
+	dictionary.Pack mixin.
+Definition dictates Q (D: dictionary.type Q) :=
+	interview_mixin.conversation (interview.mixin D).
+Notation "a '\is_answer_to' q 'in' D" := (dictates D q a) (at level 2).
+Notation "a \is_answer_to q" := (a \is_answer_to  q in _) (at level 2).
+Definition answer_unique Q (A: dictionary Q) :=
+	(@dictionary_mixin.answer_unique Q A A).
+Arguments answer_unique {Q} {A}.
 
 Section realizer.
-Context Q (D: assembly Q) Q' (D': assembly Q').
+Context Q (A: interview Q) Q' (A': interview Q').
 
-Definition rlzr (F: Q ->> Q') (f: D ->> D') :=
-		(forall q a, a \is_answer_to q -> a \from_dom f -> q \from_dom F /\
-		forall Fq, F q Fq -> exists fa, fa \is_answer_to Fq /\ f a fa).
+Definition rlzr (F: Q ->> Q') (f: A ->> A') :=
+		(forall q a, a \is_response_to q -> a \from_dom f -> q \from_dom F /\
+		forall Fq, F q Fq -> exists fa, fa \is_response_to Fq /\ f a fa).
 Notation "F '\realizes' f" := (rlzr F f) (at level 2).
 
 Global Instance rlzr_prpr:
-	Proper (@equiv Q Q' ==> @equiv D D' ==> iff) (@rlzr).
+	Proper (@equiv Q Q' ==> @equiv A A' ==> iff) (@rlzr).
 Proof.
 move => F G FeG f g feg.
 split => rlzr q a aaq afd.
@@ -76,11 +80,11 @@ have [ | a' [a'aq' faa']]:= prp q' _; first by rewrite -FeG.
 by exists a'; rewrite feg.
 Qed.
 
-Definition trnsln (f: D ->> D') :=
+Definition trnsln (f: A ->> A') :=
 	exists F,  F \realizes f.
 Notation "f \is_translation" := (trnsln f) (at level 2).
 
-Global Instance trnsln_prpr: Proper (@equiv D D' ==> iff) (@trnsln).
+Global Instance trnsln_prpr: Proper (@equiv A A' ==> iff) (@trnsln).
 Proof.
 move => f g eq; rewrite /trnsln.
 split; move => [F].
@@ -92,9 +96,9 @@ Notation "f '\is_realized_by' F" := (rlzr F f) (at level 2).
 Notation "F '\realizes' f" := (rlzr F f) (at level 2).
 
 Section realizers.
-Context Q (A: assembly Q) Q' (A': assembly Q').
+Context Q (A: interview Q) Q' (A': interview Q').
 
-Lemma rlzr_comp Q'' (A'': assembly Q'') G F (f: A ->> A') (g: A' ->> answers A''):
+Lemma rlzr_comp Q'' (A'': interview Q'') G F (f: A ->> A') (g: A' ->> A''):
 	G \realizes g -> F \realizes f -> (G o F) \realizes (g o f).
 Proof.
 move => Grg Frf q a aaq [a'' [[a' [faa' ga'a'']]] subs].
@@ -138,8 +142,8 @@ Qed.
 
 Lemma F2MF_rlzr F (f: A ->> A'):
 	(F2MF F) \realizes f <->
-	(forall q a, a \is_answer_to q -> a \from_dom f ->
-		exists a', a' \is_answer_to (F q) /\ f a a').
+	(forall q a, a \is_response_to q -> a \from_dom f ->
+		exists a', a' \is_response_to (F q) /\ f a a').
 Proof.
 split => rlzr q a aaq [a' faa'].
 have [ | [q' Fqq'] prp]:= rlzr q a aaq; first by exists a'.
@@ -150,7 +154,7 @@ by exists d'; rewrite -eq.
 Qed.
 
 Lemma F2MF_rlzr_F2MF F (f: A -> A') :
-	(F2MF F) \realizes (F2MF f) <-> forall q a, a \is_answer_to q -> (f a) \is_answer_to (F q).
+	(F2MF F) \realizes (F2MF f) <-> forall q a, a \is_response_to q -> (f a) \is_response_to (F q).
 Proof.
 rewrite F2MF_rlzr.
 split => ass phi x phinx; last by exists (f x); split => //; apply ass.
@@ -158,11 +162,11 @@ by have [ | fx [cd ->]]:= ass phi x phinx; first by apply F2MF_tot.
 Qed.
 
 Lemma rlzr_dom (f: A ->> A') F:
-	F \realizes f -> forall q a, a \is_answer_to q -> a \from_dom f -> q \from_dom F.
+	F \realizes f -> forall q a, a \is_response_to q -> a \from_dom f -> q \from_dom F.
 Proof. by move => rlzr q a aaq afd; have [ex prp]:= rlzr q a aaq afd. Qed.
 
 Lemma rlzr_val_sing (f: A ->> A') F: f \is_singlevalued -> F \realizes f ->
-	forall q a q' a', a \is_answer_to q -> f a a' -> F q q' -> a' \is_answer_to q'.
+	forall q a q' a', a \is_response_to q -> f a a' -> F q q' -> a' \is_response_to q'.
 Proof.
 move => sing rlzr q a q' a' aaq faa' Fqq'.
 have [ | _ prp]:= rlzr q a aaq; first by exists a'.
@@ -173,9 +177,9 @@ Qed.
 Lemma sing_rlzr (f: A ->> A') F: F \is_singlevalued -> f \is_singlevalued ->
 	F \realizes f
 	<->
-	(forall q a, a \is_answer_to q -> a \from_dom f -> q \from_dom F)
+	(forall q a, a \is_response_to q -> a \from_dom f -> q \from_dom F)
 		/\
-	(forall q a q' a', a \is_answer_to q -> f a a' -> F q q' -> a' \is_answer_to q').
+	(forall q a q' a', a \is_response_to q -> f a a' -> F q q' -> a' \is_response_to q').
 Proof.
 move => Fsing fsing.
 split; first by move => Frf; split; [exact: rlzr_dom | exact: rlzr_val_sing].
@@ -188,9 +192,9 @@ Qed.
 Lemma rlzr_F2MF F (f: A -> A'):
 	F \realizes (F2MF f)
 	<->
-	forall q a, a \is_answer_to q -> q \from_dom F
+	forall q a, a \is_response_to q -> q \from_dom F
 		/\
-	forall q', F q q' -> (f a) \is_answer_to q'.
+	forall q', F q q' -> (f a) \is_response_to q'.
 Proof.
 split => [ | rlzr q a aaq _].
 	split; first by apply/ rlzr_dom; [apply H | apply H0 | apply F2MF_tot ].

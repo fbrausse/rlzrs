@@ -1,6 +1,6 @@
 From mathcomp Require Import all_ssreflect.
 From mpf Require Import all_mf.
-Require Import rlzr_base rlzr_smbly.
+Require Import rlzr_base rlzr_ntrvw.
 Import Morphisms.
 
 Set Implicit Arguments.
@@ -8,15 +8,16 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Section realizers.
-Context Q (D: assembly Q).
+
+Context Q (D: interview Q).
 
 Lemma id_rlzr: (@mf_id Q) \realizes (@mf_id D).
 Proof. by move => q a qna [d /= eq]; split => [ | _ <-]; [exists q | exists a]. Qed.
 
-Context Q' (D': assembly Q').
+Context Q' (D': interview Q').
 
-Lemma cmbn_smbly_rlzr (D'': assembly D) (D''': assembly D') F G f:
-	F \realizes G -> G \realizes f -> F \realizes (f: cmbn_smbly D'' ->> cmbn_smbly D''').
+Lemma cmbn_smbly_rlzr (D'': interview D) (D''': interview D') F G f:
+	F \realizes G -> G \realizes f -> F \realizes (f: cmbn_ntrvw D'' ->> cmbn_ntrvw D''').
 Proof.
 move => FrG Grf q a [d [qnd dna]] afd.
 have [dfd prp]:= Grf d a dna afd.
@@ -27,7 +28,7 @@ have [d''' [d'nd''' fd'd''']]:= prp d' Gdd'.
 by exists d'''; split => //; exists d'.
 Qed.
 
-Lemma fprd_rlzr Q'' (D'': assembly Q'') Q''' (D''': assembly Q''')
+Lemma fprd_rlzr Q'' (D'': interview Q'') Q''' (D''': interview Q''')
 	F (f: D ->> D') G (g: D'' ->> D'''):
 	F \realizes f -> G \realizes g -> (F ** G) \realizes (f ** g).
 Proof.
@@ -45,24 +46,24 @@ by exists (q', q''').
 Qed.
 
 Lemma fst_rlzr:
-	(@mf_fst Q Q') \realizes (@mf_fst D D': (prod_assembly D D') ->> D).
+	(@mf_fst Q Q') \realizes (@mf_fst D D': (prod_interview D D') ->> D).
 Proof.
 move => [q1 q2] a [/=aaq1 aaq2] ex; split; first by exists q1.
 by move => q' <-; exists a.1.
 Qed.
 
 Lemma snd_rlzr:
-	(@mf_snd Q Q') \realizes (@mf_snd D D': (prod_assembly D D') ->> D').
+	(@mf_snd Q Q') \realizes (@mf_snd D D': (prod_interview D D') ->> D').
 Proof.
 move => [q1 q2] a [/=aaq1 aaq2] ex; split; first by exists q2.
 by move => q' <-; exists a.2.
 Qed.
 
-Lemma diag_rlzr: (@mf_diag Q) \realizes (@mf_diag D: D ->> (prod_assembly D D)).
+Lemma diag_rlzr: (@mf_diag Q) \realizes (@mf_diag D: D ->> (prod_interview D D)).
 Proof. by move => q a aaq _; split => [ | [_ _] [<- <-]]; [exists (q, q) | exists (a, a)]. Qed.
 
 Lemma cnst_rlzr (q': Q') (a': D'):
-	a' \is_answer_to q' -> (@mf_cnst Q Q' q') \realizes (@mf_cnst D D' a').
+	a' \is_response_to q' -> (@mf_cnst Q Q' q') \realizes (@mf_cnst D D' a').
 Proof. by move => a'aq' q a aaq _; split => [ | _ <-]; [exists q' | exists a']. Qed.
 
 (*
