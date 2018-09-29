@@ -1,6 +1,6 @@
 From mathcomp Require Import all_ssreflect.
 From mpf Require Import all_mf.
-Require Import rlzr_base rlzr_ntrvw.
+Require Import cdic_base cdic_ntrvw.
 Import Morphisms.
 
 Set Implicit Arguments.

@@ -1,6 +1,6 @@
 From mathcomp Require Import all_ssreflect.
 From mpf Require Import all_mf.
-Require Import rlzr_base rlzr_ntrvw rlzr_fnct.
+Require Import cdic_base cdic_ntrvw cdic_fnct.
 Import Morphisms.
 Require Import FunctionalExtensionality.
 

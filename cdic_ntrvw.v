@@ -1,6 +1,6 @@
 From mathcomp Require Import all_ssreflect.
 From mpf Require Import all_mf.
-Require Import rlzr_base ProofIrrelevance.
+Require Import cdic_base ProofIrrelevance.
 Import Morphisms.
 
 Set Implicit Arguments.
