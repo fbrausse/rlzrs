@@ -1,5 +1,4 @@
-From mpf Require Export all_mf.
-Require Export cdic_base.
-Require Export cdic_ntrvw.
-Require Export cdic_fnct.
-Require Export cdic_dict.
+Require Export ntrvw_base.
+Require Export ntrvw_rlzr.
+Require Export ntrvw_fnct.
+Require Export dict_base.

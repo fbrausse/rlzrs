@@ -1,59 +1,9 @@
-From mathcomp Require Import all_ssreflect.
-From mpf Require Import all_mf.
+Require Import ntrvw_base.
 Import Morphisms.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-
-Module interview_mixin.
-Structure type questions answers := Pack {
-conversation: questions ->> answers;
-only_respond : conversation \is_cototal;
-}.
-End interview_mixin.
-
-Module interview.
-Structure type (questions: Type):= Pack {
-answers:> Type;
-mixin: interview_mixin.type questions answers;
-}.
-End interview.
-Coercion interview.answers: interview.type >-> Sortclass.
-Coercion interview.mixin : interview.type >-> interview_mixin.type.
-Definition conversation Q (C: interview.type Q) :=
-	interview_mixin.conversation (interview.mixin C).
-Notation "a '\is_response_to' q 'in' C" := (conversation C q a) (at level 2).
-Notation "a \is_response_to q" := (a \is_response_to  q in _) (at level 2).
-Definition only_respond Q (A: interview.type Q) := (interview_mixin.only_respond A).
-Arguments only_respond {Q} {A}.
-Notation get_question a := ((cotot_spec _).1 only_respond a).
-Notation interview := interview.type.
-
-Module dictionary_mixin.
-Structure type Q (A: interview.type Q):= Pack {
-answer_unique: (conversation A) \is_singlevalued;
-}.
-End dictionary_mixin.
-
-Module dictionary.
-Structure type Q:= Pack {
-A :> interview Q;
-mixin: dictionary_mixin.type A;
-}.
-End dictionary.
-Coercion dictionary.A: dictionary.type >-> interview.type.
-Coercion	dictionary.mixin: dictionary.type >-> dictionary_mixin.type.
-Notation dictionary := (dictionary.type).
-Canonical make_modest_set Q (D: interview Q) (mixin: dictionary_mixin.type D) :=
-	dictionary.Pack mixin.
-Definition dictates Q (D: dictionary.type Q) :=
-	interview_mixin.conversation (interview.mixin D).
-Notation "a '\is_answer_to' q 'in' D" := (dictates D q a) (at level 2).
-Notation "a \is_answer_to q" := (a \is_answer_to  q in _) (at level 2).
-Definition answer_unique Q (A: dictionary Q) :=
-	(@dictionary_mixin.answer_unique Q A A).
-Arguments answer_unique {Q} {A}.
 
 Section realizer.
 Context Q (A: interview Q) Q' (A': interview Q').

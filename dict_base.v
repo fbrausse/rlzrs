@@ -1,6 +1,4 @@
-From mathcomp Require Import all_ssreflect.
-From mpf Require Import all_mf.
-Require Import cdic_base cdic_ntrvw cdic_fnct.
+Require Import ntrvw_base ntrvw_rlzr ntrvw_fnct.
 Import Morphisms.
 Require Import FunctionalExtensionality.
 
@@ -8,7 +6,32 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Section modest_sets.
+Module dictionary_mixin.
+Structure type Q (A: interview.type Q):= Pack {
+answer_unique: (conversation A) \is_singlevalued;
+}.
+End dictionary_mixin.
+
+Module dictionary.
+Structure type Q:= Pack {
+A :> interview Q;
+mixin: dictionary_mixin.type A;
+}.
+End dictionary.
+Coercion dictionary.A: dictionary.type >-> interview.type.
+Coercion	dictionary.mixin: dictionary.type >-> dictionary_mixin.type.
+Notation dictionary := (dictionary.type).
+Canonical make_modest_set Q (D: interview Q) (mixin: dictionary_mixin.type D) :=
+	dictionary.Pack mixin.
+Definition dictates Q (D: dictionary.type Q) :=
+	interview_mixin.conversation (interview.mixin D).
+Notation "a '\is_answer_to' q 'in' D" := (dictates D q a) (at level 2).
+Notation "a \is_answer_to q" := (a \is_answer_to  q in _) (at level 2).
+Definition answer_unique Q (A: dictionary Q) :=
+	(@dictionary_mixin.answer_unique Q A A).
+Arguments answer_unique {Q} {A}.
+
+Section dictionaries.
 Context Q (A: dictionary Q).
 
 Definition id_dictionary_mixin S: dictionary_mixin.type (id_interview S).
@@ -74,7 +97,7 @@ have [e' e'aq']:= subs q' Fqq'.
 have [ | [d [daq fdd']]subs']:= val q qfd e'; first by split; first by exists q'.
 exists e'; rewrite (answer_unique q a d) => //; split => //.
 Qed.
-End modest_sets.
+End dictionaries.
 
 Section mf_realizer.
 Context Q (A: dictionary Q) Q' (A': interview Q').

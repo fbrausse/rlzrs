@@ -1,6 +1,6 @@
 -R . rlzrs
-cdic_base.v
-cdic_ntrvw.v
-cdic_fnct.v
-cdic_dict.v
+ntrvw_base.v
+ntrvw_rlzr.v
+ntrvw_fnct.v
+dict_base.v
 all_dict.v
