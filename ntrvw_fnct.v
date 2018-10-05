@@ -56,6 +56,15 @@ move => [q1 q2] a [/=aaq1 aaq2] ex; split; first by exists q2.
 by move => q' <-; exists a.2.
 Qed.
 
+Definition mf_cons Q := F2MF (fun aL => @cons Q aL.1 aL.2).
+
+Lemma cons_rlzr:
+	(@mf_cons Q) \realizes (@mf_cons A: (prod_interview A (list_interview A) ->> list_interview A)).
+Proof.
+move => [q K] [a L] [arq LrK] _ ; split; first exact/F2MF_tot.
+by move => _ /= <-; exists (cons a L).
+Qed.
+
 Lemma diag_rlzr: (@mf_diag Q) \realizes (@mf_diag A: A ->> (prod_interview A A)).
 Proof. by move => q a aaq _; split => [ | [_ _] [<- <-]]; [exists (q, q) | exists (a, a)]. Qed.
 

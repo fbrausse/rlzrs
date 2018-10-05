@@ -88,4 +88,27 @@ Definition sum_interview_mixin: interview_mixin.type (Q + Q') (A + A').
 Proof. by exists sum_conv; exact /sum_conv_sur. Defined.
 
 Canonical sum_interview := interview.Pack sum_interview_mixin.
+
+Fixpoint list_conv_prp (K: seq Q) (L: seq A) := match K with
+	| nil => L = nil
+	| (q :: K') => match L with
+		| nil => False
+		| (a :: L') => a \is_response_to q /\ list_conv_prp K' L'
+	end
+end.
+
+Definition list_conv := make_mf list_conv_prp.
+
+Lemma list_conv_sur: list_conv \is_cototal.
+Proof.
+rewrite cotot_spec.
+elim => [ | a L [K lcKL]]; first by exists nil.
+have [q qna] := get_question a.
+by exists (q :: K).
+Qed.
+
+Definition list_interview_mixin: interview_mixin.type (seq Q) (seq A).
+Proof. by exists list_conv; exact /list_conv_sur. Defined.
+
+Canonical list_interview := interview.Pack list_interview_mixin.
 End interviews.
