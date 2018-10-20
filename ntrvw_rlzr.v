@@ -1,3 +1,4 @@
+From mathcomp Require Import all_ssreflect.
 Require Import ntrvw_base.
 Import Morphisms.
 
@@ -9,7 +10,7 @@ Section realizer.
 Context Q (A: interview Q) Q' (A': interview Q').
 
 Definition rlzr (F: Q ->> Q') (f: A ->> A') :=
-		(forall q a, a \is_response_to q -> a \from_dom f -> q \from_dom F /\
+		(forall q a, a \is_response_to q -> a \from dom f -> q \from dom F /\
 		forall Fq, F q Fq -> exists fa, fa \is_response_to Fq /\ f a fa).
 Notation "F '\realizes' f" := (rlzr F f) (at level 2).
 
@@ -18,12 +19,12 @@ Global Instance rlzr_prpr:
 Proof.
 move => F G FeG f g feg.
 split => rlzr q a aaq afd.
-	have afd': a \from_dom f by rewrite feg.
+	have afd': a \from dom f by rewrite feg.
 	split => [ | q' Gqq']; first by have [[q' Fqq'] _]:= rlzr q a aaq afd'; exists q'; rewrite -FeG.
 	have [_ prp]:= rlzr q a aaq afd'.
 	have [ | a' [a'aq' faa']]:= prp q' _; first by rewrite FeG.
 	by exists a'; rewrite -feg.
-have afd': a \from_dom g by rewrite -feg.
+have afd': a \from dom g by rewrite -feg.
 split => [ | q' Gqq']; first by have [[q' Fqq'] _]:= rlzr q a aaq afd'; exists q'; rewrite FeG.
 have [_ prp]:= rlzr q a aaq afd'.
 have [ | a' [a'aq' faa']]:= prp q' _; first by rewrite -FeG.
@@ -54,14 +55,14 @@ Proof.
 move => Grg Frf q a aaq [a'' [[a' [faa' ga'a'']]] subs].
 split; last first.
 	move => q'' [[q' [Fqq' Gq'q'']] subs'].
-	have afd: a \from_dom f by exists a'.
+	have afd: a \from dom f by exists a'.
 	have [_ prp]:= Frf q a aaq afd.
 	have [d' [d'aq' fad']]:= prp q' Fqq'.
 	have [_ prp']:= Grg q' d' d'aq' (subs d' fad').
 	have [d'' [d''aq'' gd'd'']]:= prp' q'' Gq'q''.
 	exists d''; split => //.
 	by split; first by exists d'.
-have afd: a \from_dom f by exists a'.
+have afd: a \from dom f by exists a'.
 have [[q' Fqq'] prp]:= Frf q a aaq afd.
 have [d' [d'aq' fad']]:= prp q' Fqq'.
 have [[q'' Gq'q''] prp']:= Grg q' d' d'aq' (subs d' fad').
@@ -92,7 +93,7 @@ Qed.
 
 Lemma F2MF_rlzr F (f: A ->> A'):
 	(F2MF F) \realizes f <->
-	(forall q a, a \is_response_to q -> a \from_dom f ->
+	(forall q a, a \is_response_to q -> a \from dom f ->
 		exists a', a' \is_response_to (F q) /\ f a a').
 Proof.
 split => rlzr q a aaq [a' faa'].
@@ -112,7 +113,7 @@ by have [ | fx [cd ->]]:= ass phi x phinx; first by apply F2MF_tot.
 Qed.
 
 Lemma rlzr_dom (f: A ->> A') F:
-	F \realizes f -> forall q a, a \is_response_to q -> a \from_dom f -> q \from_dom F.
+	F \realizes f -> forall q a, a \is_response_to q -> a \from dom f -> q \from dom F.
 Proof. by move => rlzr q a aaq afd; have [ex prp]:= rlzr q a aaq afd. Qed.
 
 Lemma rlzr_val_sing (f: A ->> A') F: f \is_singlevalued -> F \realizes f ->
@@ -127,7 +128,7 @@ Qed.
 Lemma sing_rlzr (f: A ->> A') F: F \is_singlevalued -> f \is_singlevalued ->
 	F \realizes f
 	<->
-	(forall q a, a \is_response_to q -> a \from_dom f -> q \from_dom F)
+	(forall q a, a \is_response_to q -> a \from dom f -> q \from dom F)
 		/\
 	(forall q a q' a', a \is_response_to q -> f a a' -> F q q' -> a' \is_response_to q').
 Proof.
@@ -142,7 +143,7 @@ Qed.
 Lemma rlzr_F2MF F (f: A -> A'):
 	F \realizes (F2MF f)
 	<->
-	forall q a, a \is_response_to q -> q \from_dom F
+	forall q a, a \is_response_to q -> q \from dom F
 		/\
 	forall q', F q q' -> (f a) \is_response_to q'.
 Proof.

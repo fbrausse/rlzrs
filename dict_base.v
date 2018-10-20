@@ -1,3 +1,4 @@
+From mathcomp Require Import all_ssreflect.
 Require Import ntrvw_base ntrvw_rlzr ntrvw_fnct.
 Import Morphisms.
 Require Import FunctionalExtensionality.
@@ -88,7 +89,7 @@ split => [ | q' Fqq'].
 	exists a'; split; first by exists a.
 	move => d daq.
 	by exists a'; rewrite (answer_unique q d a).
-have qfd: q \from_dom (f o (conversation A)).
+have qfd: q \from dom (f o (conversation A)).
 	exists a'; split; first by exists a.
 	move => d daq.
 	by exists a'; rewrite (answer_unique q d a).
@@ -101,6 +102,19 @@ End dictionaries.
 
 Section mf_realizer.
 Context Q (A: dictionary Q) Q' (A': interview Q').
+
+Lemma rlzr_F2MF_eq F (f g: A' -> A):
+	F \realizes (F2MF f) -> F \realizes (F2MF g) -> f =1 g.
+Proof.
+move => /rlzr_F2MF rlzr /rlzr_F2MF rlzr' q.
+have [c cnq]:= get_question q.
+have [[d Fcd] prp]:= rlzr c q cnq.
+have [_ prp']:= rlzr' c q cnq.
+have dnfq:= prp d Fcd.
+have dngq:= prp' d Fcd.
+by have /=->:= (answer_unique d (f q) (g q) dnfq dngq).
+Qed.
+
 Definition mf_rlzr := make_mf (fun F (f: A ->> A') => F \realizes f).
 
 Lemma rlzr_sur: mf_rlzr \is_cototal.
@@ -144,7 +158,7 @@ Definition mf_frlzr := make_mf (fun F (f: A -> A') => F \realizes (F2MF f)).
 Lemma mf_frlzr_sur: mf_frlzr \is_cototal.
 Proof.
 rewrite cotot_spec => [f].
-have [ | F [_ Frf]]//:= (rlzr_sur (F2MF f)).2.
+have [ | F Frf]//:= (rlzr_sur (F2MF f)).2.
 by exists F.
 Qed.
 
@@ -173,7 +187,7 @@ From mpf Require Import choice_mf.
 Lemma frlzr_sur (q': Q'): frlzr \is_cototal.
 Proof.
 rewrite cotot_spec => [f].
-have [ | F [_ Frf]]//:= (rlzr_sur (F2MF f)).2.
+have [ | F Frf]//:= (rlzr_sur (F2MF f)).2.
 have [g gcF]:= exists_choice F q'.
 by exists g; apply /icf_rlzr/gcF.
 Qed.

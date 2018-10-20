@@ -1,4 +1,5 @@
-Require Import ntrvw_base ntrvw_rlzr.
+From mathcomp Require Import all_ssreflect.
+Require Import ntrvw_base ntrvw_rlzr ntrvw_cncl.
 Import Morphisms.
 
 Set Implicit Arguments.
@@ -30,8 +31,8 @@ Lemma fprd_rlzr Q'' (A'': interview Q'') Q''' (A''': interview Q''')
 	F \realizes f -> G \realizes g -> (F ** G) \realizes (f ** g).
 Proof.
 move => Frf Grg [q q''] [a a''] [/=aaq a''aq''] [[a' a''']] [/=faa' ga''a'''].
-have afd: a \from_dom f by exists a'.
-have afd': a'' \from_dom g by exists a'''.
+have afd: a \from dom f by exists a'.
+have afd': a'' \from dom g by exists a'''.
 have [ex prp]:= Frf q a aaq afd.
 have [ex' prp']:= Grg q'' a'' a''aq'' afd'.
 split => [ | [q' q'''] /= [Fqq' Gq''q''']]; last first.

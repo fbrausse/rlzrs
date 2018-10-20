@@ -1,4 +1,4 @@
-From mathcomp Require Export all_ssreflect.
+From mathcomp Require Import all_ssreflect.
 From mpf Require Export all_mf.
 Import Morphisms.
 
@@ -44,7 +44,7 @@ Proof. exists (F2MF f\^-1); exact /cotot_tot_inv/F2MF_tot. Defined.
 
 Definition fun_interview Q A (f: A -> Q):= interview.Pack (fun_interview_mixin f).
 
-Canonical mf_interview S T := fun_interview (@F2MF S T).
+Definition mf_interview S T := fun_interview (@F2MF S T).
 
 Canonical sub_interview A (P: mf_subset.type A):= fun_interview (@projT1 A P).
 
@@ -63,7 +63,7 @@ Qed.
 Definition combine_interview_mixin (D: interview A): interview_mixin.type Q D.
 Proof. exists (comp_conv D); exact/comp_conv_sur. Defined.
 
-Canonical cmbn_ntrvw (D: interview A) := interview.Pack (combine_interview_mixin D).
+Definition cmbn_ntrvw (D: interview A) := interview.Pack (combine_interview_mixin D).
 
 Context Q' (A': interview Q').
 Definition prod_conv := (conversation A) ** (conversation A').
@@ -74,7 +74,7 @@ Proof. by apply/fprd_cotot/only_respond/only_respond. Qed.
 Definition prod_interview_mixin : interview_mixin.type (Q * Q') (A * A').
 Proof. by exists prod_conv; exact/prod_conv_sur. Defined.
 
-Canonical prod_interview := interview.Pack prod_interview_mixin.
+Definition prod_interview := interview.Pack prod_interview_mixin.
 
 Definition sum_conv:= (conversation A) +s+ (conversation A').
 
@@ -87,7 +87,7 @@ Qed.
 Definition sum_interview_mixin: interview_mixin.type (Q + Q') (A + A').
 Proof. by exists sum_conv; exact /sum_conv_sur. Defined.
 
-Canonical sum_interview := interview.Pack sum_interview_mixin.
+Definition sum_interview := interview.Pack sum_interview_mixin.
 
 Fixpoint list_conv_prp (K: seq Q) (L: seq A) := match K with
 	| nil => L = nil
@@ -110,5 +110,5 @@ Qed.
 Definition list_interview_mixin: interview_mixin.type (seq Q) (seq A).
 Proof. by exists list_conv; exact /list_conv_sur. Defined.
 
-Canonical list_interview := interview.Pack list_interview_mixin.
+Definition list_interview := interview.Pack list_interview_mixin.
 End interviews.
