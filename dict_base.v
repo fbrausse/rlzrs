@@ -53,7 +53,7 @@ Canonical cmbn_dict (D'': dictionary A) :=
 Context  Q' (A': dictionary Q').
 
 Lemma prod_conv_sing: (prod_conv A A') \is_singlevalued.
-Proof. apply /fprd_sing; split; apply/answer_unique. Qed.
+Proof. exact/fprd_sing/answer_unique/answer_unique. Qed.
 
 Definition prod_dictionary_mixin: dictionary_mixin.type (prod_interview A A').
 Proof. by split; exact/prod_conv_sing. Defined.
@@ -71,32 +71,25 @@ Canonical dictionary_set := dictionary.Pack sum_dictionary_mixin.
 Lemma rlzr_spec (F: Q ->> Q') f:
 	F \realizes f <-> ((conversation A') o F) \tightens (f o (conversation A)).
 Proof.
-split => [Frf | [dm val]].
-	split => q [a' [[a [aaq faa']] subs]].
+split => [Frf | tight].
+	apply split_tight => q [a' [[a [aaq faa']] subs]].
 		have [[q' Fqq'] prp]:= Frf q a aaq (subs a aaq).
 		have [d' [d'aq' fad']]:= prp q' Fqq'.
 		exists d'; split => [ | r' Fqr']; first by exists q'.
 		by have [e' [e'aq' fae']]:= prp r' Fqr'; exists e'.
-	move => d' [[q' [Fqq' d'aq']]subs'].
-	split; last 	by move => d daq; apply subs.
-	have [_ prp]:= Frf q a aaq (subs a aaq).
-	have [d'' [d''aq' fad'']]:= prp q' Fqq'.
-	exists a; split => //.
-	by rewrite (answer_unique q' d' d'').
+	move => d' [[q' [Fqq' d'aq']] subs'].
+	split => [ | d daq]; last exact/subs.
+	have [d'' [d''aq' fad'']]:= rlzr_val Frf aaq (subs a aaq) Fqq'.
+	by exists a; split => //; rewrite (answer_unique q' d' d'').
 move => q a aaq [a' faa'].
-split => [ | q' Fqq'].
-	have [ | d' [[q' [Fqq' d'aq']] subs]]:= dm q; last by exists q'.
-	exists a'; split; first by exists a.
-	move => d daq.
-	by exists a'; rewrite (answer_unique q d a).
 have qfd: q \from dom (f o (conversation A)).
-	exists a'; split; first by exists a.
-	move => d daq.
+	exists a'; split => [ | d daq]; first by exists a.
 	by exists a'; rewrite (answer_unique q d a).
-have [d' [[z' [Fqz' d'az']] subs]]:= dm q qfd.
-have [e' e'aq']:= subs q' Fqq'.
-have [ | [d [daq fdd']]subs']:= val q qfd e'; first by split; first by exists q'.
-exists e'; rewrite (answer_unique q a d) => //; split => //.
+split => [ | q' Fqq'].
+	by have [ | d' [[q' [Fqq' d'aq']] subs]]:= (tight_dom tight) q; last by exists q'.
+have [d' [[z' [Fqz' d'az']] subs]]:= (tight_dom tight) q qfd; have [e' e'aq']:= subs q' Fqq'.
+have [ | [d [daq fdd']] subs']:= (tight_val tight qfd) e'; first by split; first by exists q'.
+by exists e'; rewrite (answer_unique q a d); first split.
 Qed.
 End dictionaries.
 
@@ -106,29 +99,23 @@ Context Q (A: dictionary Q) Q' (A': interview Q').
 Lemma rlzr_F2MF_eq F (f g: A' -> A):
 	F \realizes (F2MF f) -> F \realizes (F2MF g) -> f =1 g.
 Proof.
-move => /rlzr_F2MF rlzr /rlzr_F2MF rlzr' q.
-have [c cnq]:= get_question q.
-have [[d Fcd] prp]:= rlzr c q cnq.
-have [_ prp']:= rlzr' c q cnq.
-have dnfq:= prp d Fcd.
-have dngq:= prp' d Fcd.
-by have /=->:= (answer_unique d (f q) (g q) dnfq dngq).
+move => rlzr rlzr' a.
+have [q arq]:= get_question a.
+have [ | Fq FqFq]:= rlzr_dom rlzr arq; first exact/F2MF_dom.
+have [ | fa [farFq ->]]:= rlzr_val rlzr arq _ FqFq; first exact/F2MF_dom.
+have [ | ga [garFq ->]]:= rlzr_val rlzr' arq _ FqFq; first exact/F2MF_dom.
+by rewrite (answer_unique Fq fa ga).
 Qed.
 
 Definition mf_rlzr := make_mf (fun F (f: A ->> A') => F \realizes f).
 
 Lemma rlzr_sur: mf_rlzr \is_cototal.
 Proof.
-rewrite cotot_spec => f.
+move => f.
 exists (make_mf (fun q Fq => forall a, a \is_response_to q -> exists fa, fa \is_response_to Fq /\ f a fa)).
-move => q a qna [fa fafa]; split.
-	have [Fq Fqnfa]:= get_question fa.
-	exists Fq => a' qna'.
-	exists fa; split => //.
-	by rewrite (answer_unique q a' a).
-move => q' /=Fqq'.
-have [a' [q'na' faa']]:= Fqq' a qna.
-by exists a'.
+move => q a qna [fa fafa]; split => [ | Fq FqFq]; last by have [a' []]:= FqFq a qna; exists a'.
+have [Fq Fqnfa]:= get_question fa; exists Fq => a' qna'.
+by exists fa; split => //; rewrite (answer_unique q a' a).
 Qed.
 
 Definition mf_rlzr_interview_mixin : interview_mixin.type (Q ->> Q') (A ->> A').
@@ -143,24 +130,10 @@ Context Q (A: dictionary Q) Q' (A': dictionary Q').
 Definition	ftrnsln (f: A -> A') := trnsln (F2MF f).
 Notation "f \is_translation_function" := (ftrnsln f) (at level 2).
 
-Lemma icf_rlzr F (f: A ->> A'):
-	F \realizes f -> forall g, g \is_choice_for F -> (F2MF g) \realizes f.
-Proof.
-rewrite rlzr_spec.
-move => rlzr G icf.
-rewrite rlzr_spec.
-apply/ tight_trans; first by apply rlzr.
-exact/ tight_comp_r/icf_F2MF_tight.
-Qed.
-
 Definition mf_frlzr := make_mf (fun F (f: A -> A') => F \realizes (F2MF f)).
 
 Lemma mf_frlzr_sur: mf_frlzr \is_cototal.
-Proof.
-rewrite cotot_spec => [f].
-have [ | F Frf]//:= (rlzr_sur (F2MF f)).2.
-by exists F.
-Qed.
+Proof. by move => f; have [F Frf]//:= rlzr_sur (F2MF f); exists F. Qed.
 
 Definition mf_frlzr_interview_mixin: interview_mixin.type (Q ->> Q') (A -> A').
 Proof. exists mf_frlzr; exact/mf_frlzr_sur. Defined.
@@ -186,8 +159,8 @@ Definition frlzr := make_mf (fun F (f: A -> A') => (F2MF F) \realizes (F2MF f)).
 From mpf Require Import choice_mf.
 Lemma frlzr_sur (q': Q'): frlzr \is_cototal.
 Proof.
-rewrite cotot_spec => [f].
-have [ | F Frf]//:= (rlzr_sur (F2MF f)).2.
+move => f.
+have [F Frf]//:= rlzr_sur (F2MF f).
 have [g gcF]:= exists_choice F q'.
 by exists g; apply /icf_rlzr/gcF.
 Qed.

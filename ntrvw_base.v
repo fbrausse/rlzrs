@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From mpf Require Export all_mf.
+From mpf Require Export all_mpf.
 Import Morphisms.
 
 Set Implicit Arguments.
@@ -27,12 +27,12 @@ Notation "a '\is_response_to' q 'in' C" := (conversation C q a) (at level 2).
 Notation "a \is_response_to q" := (a \is_response_to  q in _) (at level 2).
 Definition only_respond Q (A: interview.type Q) := (interview_mixin.only_respond A).
 Arguments only_respond {Q} {A}.
-Notation get_question a := ((cotot_spec _).1 only_respond a).
+Notation get_question a := (only_respond a).
 Notation interview := interview.type.
 
 Section interviews.
 Lemma id_sur S: (@mf_id S) \is_cototal.
-Proof. by rewrite cotot_spec => c; exists c. Qed.
+Proof. by move => c; exists c. Qed.
 
 Definition id_interview_mixin S: interview_mixin.type S S.
 Proof. exists mf_id; exact/id_sur. Defined.
@@ -54,7 +54,7 @@ Definition comp_conv (D: interview A):= (conversation D) o_R (conversation A).
 
 Lemma comp_conv_sur (D: interview A): (comp_conv D) \is_cototal.
 Proof.
-rewrite cotot_spec => d''.
+move => d''.
 have [d dnd'']:= get_question d''.
 have [q qnd]:= get_question d.
 by exists q; exists d.
@@ -79,7 +79,8 @@ Definition prod_interview := interview.Pack prod_interview_mixin.
 Definition sum_conv:= (conversation A) +s+ (conversation A').
 
 Lemma sum_conv_sur: sum_conv \is_cototal.
-Proof. rewrite cotot_spec => [[a | b]] /=.
+Proof.
+move => [a | b] /=.
 	by have [c cna]:= get_question a; exists (inl c).
 by have [c cnab]:= get_question b; exists (inr c).
 Qed.
@@ -101,7 +102,6 @@ Definition list_conv := make_mf list_conv_prp.
 
 Lemma list_conv_sur: list_conv \is_cototal.
 Proof.
-rewrite cotot_spec.
 elim => [ | a L [K lcKL]]; first by exists nil.
 have [q qna] := get_question a.
 by exists (q :: K).
