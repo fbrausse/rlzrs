@@ -66,7 +66,18 @@ Proof. exact/fsum_sing/answer_unique/answer_unique. Qed.
 Definition sum_dictionary_mixin: dictionary_mixin.type (sum_interview A A').
 Proof. split; exact/sum_conv_sing. Defined.
 
-Canonical dictionary_set := dictionary.Pack sum_dictionary_mixin.
+Canonical dictionary_sum := dictionary.Pack sum_dictionary_mixin.
+
+Lemma list_conv_sing: (list_conv A) \is_singlevalued.
+Proof.
+elim => [L K -> -> | q R ih [ | a L] [ | b K]]//= [arq LnR] [brq KnR].
+by rewrite (answer_unique q a b) // (ih L K).
+Qed.
+
+Definition list_dictionary_mixin: dictionary_mixin.type (list_interview A).
+Proof. split; exact/list_conv_sing. Defined.
+
+Canonical dictionary_list := dictionary.Pack list_dictionary_mixin.
 
 Lemma rlzr_spec (F: Q ->> Q') f:
 	F \realizes f <-> ((conversation A') o F) \tightens (f o (conversation A)).
@@ -107,9 +118,7 @@ have [ | ga [garFq ->]]:= rlzr_val rlzr' arq _ FqFq; first exact/F2MF_dom.
 by rewrite (answer_unique Fq fa ga).
 Qed.
 
-Definition mf_rlzr := make_mf (fun F (f: A ->> A') => F \realizes f).
-
-Lemma rlzr_sur: mf_rlzr \is_cototal.
+Lemma rlzr_sur: (@mf_rlzr Q A Q' A') \is_cototal.
 Proof.
 move => f.
 exists (make_mf (fun q Fq => forall a, a \is_response_to q -> exists fa, fa \is_response_to Fq /\ f a fa)).
@@ -118,27 +127,20 @@ have [Fq Fqnfa]:= get_question fa; exists Fq => a' qna'.
 by exists fa; split => //; rewrite (answer_unique q a' a).
 Qed.
 
-Definition mf_rlzr_interview_mixin : interview_mixin.type (Q ->> Q') (A ->> A').
+Definition rlzr_interview_mixin: interview_mixin.type (Q ->> Q') (A ->> A').
 Proof. exists mf_rlzr; exact rlzr_sur. Defined.
 
-Canonical rlzr_ntrvw := interview.Pack mf_rlzr_interview_mixin.
+Canonical rlzrs := interview.Pack rlzr_interview_mixin.
 End mf_realizer.
 
-Section realizer_functions.
-Context Q (A: dictionary Q) Q' (A': dictionary Q').
+From mpf Require Import choice_mf.
 
-Definition	ftrnsln (f: A -> A') := trnsln (F2MF f).
-Notation "f \is_translation_function" := (ftrnsln f) (at level 2).
+Section mf_rlzr_f.
+Context Q (A: interview Q) Q' (A': dictionary Q').
 
-Definition mf_frlzr := make_mf (fun F (f: A -> A') => F \realizes (F2MF f)).
+Definition mf_rlzr_f := make_mf (fun F (f: A -> A') => F \realizes (F2MF f)).
 
-Lemma mf_frlzr_sur: mf_frlzr \is_cototal.
-Proof. by move => f; have [F Frf]//:= rlzr_sur (F2MF f); exists F. Qed.
-
-Definition mf_frlzr_interview_mixin: interview_mixin.type (Q ->> Q') (A -> A').
-Proof. exists mf_frlzr; exact/mf_frlzr_sur. Defined.
-
-Lemma mf_frlzr_sing: mf_frlzr \is_singlevalued.
+Lemma mf_rlzr_f_sing: mf_rlzr_f \is_singlevalued.
 Proof.
 move => F f g /rlzr_F2MF Frf /rlzr_F2MF Frg.
 apply functional_extensionality => a.
@@ -149,15 +151,23 @@ have [_ prp']:= Frg q a qna.
 specialize (prp' Fq FqFq).
 by rewrite (answer_unique Fq (f a) (g a)).
 Qed.
+End mf_rlzr_f.
 
-Definition mf_frlzr_dictionary_mixin:
-	dictionary_mixin.type (interview.Pack mf_frlzr_interview_mixin).
-Proof. split; exact/mf_frlzr_sing. Defined.
+Section realizer_functions.
+Context Q (A: dictionary Q) Q' (A': dictionary Q').
+
+Lemma mf_rlzr_f_interview_mixin: interview_mixin.type (Q ->> Q') (A -> A').
+Proof. exists (@mf_rlzr_f Q A Q' A') => f; exact/rlzr_sur. Defined.
+
+Definition mf_rlzr_f_dictionary_mixin:
+	dictionary_mixin.type (interview.Pack mf_rlzr_f_interview_mixin).
+Proof. split; exact/mf_rlzr_f_sing. Defined.
 
 Definition frlzr := make_mf (fun F (f: A -> A') => (F2MF F) \realizes (F2MF f)).
 
-From mpf Require Import choice_mf.
-Lemma frlzr_sur (q': Q'): frlzr \is_cototal.
+Context (q': Q').
+
+Lemma frlzr_sur: frlzr \is_cototal.
 Proof.
 move => f.
 have [F Frf]//:= rlzr_sur (F2MF f).
@@ -165,10 +175,25 @@ have [g gcF]:= exists_choice F q'.
 by exists g; apply /icf_rlzr/gcF.
 Qed.
 
-Definition frlzr_interview_mixin (q': Q'): interview_mixin.type (Q -> Q') (A -> A').
-Proof. exists frlzr; exact/(frlzr_sur q'). Defined.
+Definition frlzr_interview_mixin: interview_mixin.type (Q -> Q') (A -> A').
+Proof. by exists frlzr; apply/frlzr_sur. Defined.
 
-Lemma frlzr_sing: mf_frlzr \is_singlevalued.
-Proof. by move => F f g Frf Frg; exact/(mf_frlzr_sing Frf Frg). Qed.
+Canonical frlzrs:= interview.Pack frlzr_interview_mixin.
+
+Lemma frlzr_sing: frlzr \is_singlevalued.
+Proof. by move => F f g Frf Frg; exact/(mf_rlzr_f_sing Frf Frg). Qed.
+
+Definition frlzrs_dictionary_mixin: dictionary_mixin.type frlzrs.
+Proof. split; exact/frlzr_sing. Defined.
+
+Canonical frlzr_dictionary:= dictionary.Pack frlzrs_dictionary_mixin.
+
+Lemma exte_tot S T: (@mf_exte S T) \is_total.
+Proof. by move => f; exists f => /= s t. Qed.
+
+Lemma tight_rlzr: (@mf_tight Q Q') \realizes (@mf_tight A A').
+Proof.
+move => F f fcF _; split => [ | G tight]; first by exists F.
+by exists f; split; first exact/tight_rlzr/tight.
+Qed.
 End realizer_functions.
-Notation "f '\is_transation'" := (trnsln f) (at level 2).

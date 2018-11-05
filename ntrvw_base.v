@@ -14,7 +14,7 @@ only_respond : conversation \is_cototal;
 End interview_mixin.
 
 Module interview.
-Structure type (questions: Type):= Pack {
+Structure type (questions: Type) := Pack {
 answers:> Type;
 mixin: interview_mixin.type questions answers;
 }.
@@ -43,10 +43,9 @@ Definition fun_interview_mixin Q A (f: A -> Q): interview_mixin.type Q A.
 Proof. exists (F2MF f\^-1); exact /cotot_tot_inv/F2MF_tot. Defined.
 
 Definition fun_interview Q A (f: A -> Q):= interview.Pack (fun_interview_mixin f).
+Arguments fun_interview: clear implicits.
 
-Definition mf_interview S T := fun_interview (@F2MF S T).
-
-Canonical sub_interview A (P: mf_subset.type A):= fun_interview (@projT1 A P).
+Canonical sub_interview A (P: mf_subset.type A):= fun_interview A {a: A | P a} (@projT1 A P).
 
 Context Q (A : interview Q).
 

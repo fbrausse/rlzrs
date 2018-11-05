@@ -13,21 +13,7 @@ Definition rlzr (F: Q ->> Q') (f: A ->> A') :=
 		(forall q a, a \is_response_to q -> a \from dom f -> q \from dom F /\
 		forall Fq, F q Fq -> exists fa, fa \is_response_to Fq /\ f a fa).
 Notation "F '\realizes' f" := (rlzr F f) (at level 2).
-
-Lemma rlzr_dom (F: Q ->> Q') (f: A ->> A') q a: F \realizes f ->
-	a \is_response_to q -> a \from dom f -> q \from dom F.
-Proof. by move => Frf arq qfd; have []:= Frf q a arq qfd. Qed.
-
-Lemma rlzr_val (F: Q ->> Q') (f: A ->> A') q a Fq: F \realizes f ->
-	a \is_response_to q -> a \from dom f -> F q Fq -> exists fa, fa \is_response_to Fq /\ f a fa.
-Proof. by move => Frf arq qfd FqFq; have [_ prp]:= Frf q a arq qfd; apply prp. Qed.
-
-Lemma split_rlzr (F: Q ->> Q') (f: A ->> A'):
-		(forall q a, a \is_response_to q -> a \from dom f -> q \from dom F) ->
-		(forall q a Fq, a\is_response_to q -> a \from dom f -> F q Fq -> exists fa, fa \is_response_to Fq /\ f a fa) -> F \realizes f.
-Proof.
-by move => dm val q a arq afd; split => [ | Fq FqFq]; [apply/dm/afd | apply/val/FqFq].
-Qed.
+Definition mf_rlzr := make_mf rlzr.
 
 Global Instance rlzr_prpr:
 	Proper (@equiv Q Q' ==> @equiv A A' ==> iff) (@rlzr).
@@ -46,20 +32,46 @@ have [ | a' [a'aq' faa']]:= prp q' _; first by rewrite -FeG.
 by exists a'; rewrite feg.
 Qed.
 
-Definition trnsln (f: A ->> A') :=
-	exists F,  F \realizes f.
-Notation "f \is_translation" := (trnsln f) (at level 2).
-
-Global Instance trnsln_prpr: Proper (@equiv A A' ==> iff) (@trnsln).
+Lemma split_rlzr (F: Q ->> Q') (f: A ->> A'):
+		(forall q a, a \is_response_to q -> a \from dom f -> q \from dom F) ->
+		(forall q a, a\is_response_to q -> a \from dom f -> forall Fq, F q Fq -> exists fa, fa \is_response_to Fq /\ f a fa) -> F \realizes f.
 Proof.
-by move => f g eq; rewrite /trnsln; split; move => [F]; exists F; [rewrite -eq | rewrite eq].
+by move => dm val q a arq afd; split => [ | Fq FqFq]; [apply/dm/afd | apply/val/FqFq].
 Qed.
+
+Lemma rlzr_dom (F: Q ->> Q') (f: A ->> A') q a: F \realizes f ->
+	a \is_response_to q -> a \from dom f -> q \from dom F.
+Proof. by move => Frf arq qfd; have []:= Frf q a arq qfd. Qed.
+
+Lemma rlzr_val (F: Q ->> Q') (f: A ->> A') q a Fq: F \realizes f ->
+	a \is_response_to q -> a \from dom f -> F q Fq -> exists fa, fa \is_response_to Fq /\ f a fa.
+Proof. by move => Frf arq qfd FqFq; have [_ prp]:= Frf q a arq qfd; apply prp. Qed.
 End realizer.
+Arguments mf_rlzr {Q} {A} {Q'} {A'}.
 Notation "f '\is_realized_by' F" := (rlzr F f) (at level 2).
 Notation "F '\realizes' f" := (rlzr F f) (at level 2).
 
 Section realizers.
+Lemma id_rlzr_tight Q Q' (F G: id_interview Q ->> id_interview Q'):
+	F \realizes G <-> F \tightens G.
+Proof.
+split =>[rlzr s sfd | tight q a <- afd].
+	split => [ | t Fst]; first exact /rlzr_dom/sfd.
+	by have [ | Fs [<-]]// :=rlzr_val rlzr _ sfd Fst.
+split => [ | Fq FqFq]; first exact/tight_dom/afd.
+exists Fq; split => //; exact/tight_val/FqFq.
+Qed.
+
 Context Q (A: interview Q) Q' (A': interview Q').
+
+Lemma rlzr_val_sing (f: A ->> A') F: f \is_singlevalued -> F \realizes f ->
+	forall q a q' a', a \is_response_to q -> f a a' -> F q q' -> a' \is_response_to q'.
+Proof.
+move => sing rlzr q a q' a' aaq faa' Fqq'.
+have [ | _ prp]:= rlzr q a aaq; first by exists a'.
+have [d' [d'aq' fad']]:= prp q' Fqq'.
+by rewrite (sing a a' d').
+Qed.
 
 Lemma rlzr_comp Q'' (A'': interview Q'') G F (f: A ->> A') (g: A' ->> A''):
 	G \realizes g -> F \realizes f -> (G o F) \realizes (g o f).
@@ -111,21 +123,26 @@ split => rlzr q a aaq afd; first by apply/rlzr_val; first apply rlzr; first appl
 by split => [ | Fq <-]; [rewrite F2MF_dom | apply/rlzr].
 Qed.
 
+Lemma rlzr_F2MF F (f: A -> A'):
+	F \realizes (F2MF f)
+	<->
+	forall q a, a \is_response_to q -> q \from dom F
+		/\
+	forall q', F q q' -> (f a) \is_response_to q'.
+Proof.
+split => [ | rlzr q a aaq _].
+	split; first by apply/ rlzr_dom; [apply H | apply H0 | apply F2MF_tot ].
+	by intros; apply/ rlzr_val_sing; [apply F2MF_sing | apply H | apply H0 | | ].
+split => [ | q' Fqq']; first by have []:= rlzr q a aaq.
+by exists (f a); split => //; apply (rlzr q a aaq).2.
+Qed.
+
 Lemma F2MF_rlzr_F2MF F (f: A -> A') :
 	(F2MF F) \realizes (F2MF f) <-> forall q a, a \is_response_to q -> (f a) \is_response_to (F q).
 Proof.
 rewrite F2MF_rlzr.
 split => ass phi x phinx; last by exists (f x); split => //; apply ass.
 by have [ | fx [cd ->]]:= ass phi x phinx; first by apply F2MF_tot.
-Qed.
-
-Lemma rlzr_val_sing (f: A ->> A') F: f \is_singlevalued -> F \realizes f ->
-	forall q a q' a', a \is_response_to q -> f a a' -> F q q' -> a' \is_response_to q'.
-Proof.
-move => sing rlzr q a q' a' aaq faa' Fqq'.
-have [ | _ prp]:= rlzr q a aaq; first by exists a'.
-have [d' [d'aq' fad']]:= prp q' Fqq'.
-by rewrite (sing a a' d').
 Qed.
 
 Lemma sing_rlzr (f: A ->> A') F: F \is_singlevalued -> f \is_singlevalued ->
@@ -142,21 +159,6 @@ split => [ | q' Fqq']; first by apply /prp/afd/aaq.
 move: afd => [a' faa'].
 by exists a'; split => //; apply /cnd/Fqq'/faa'.
 Qed.
-
-Lemma rlzr_F2MF F (f: A -> A'):
-	F \realizes (F2MF f)
-	<->
-	forall q a, a \is_response_to q -> q \from dom F
-		/\
-	forall q', F q q' -> (f a) \is_response_to q'.
-Proof.
-split => [ | rlzr q a aaq _].
-	split; first by apply/ rlzr_dom; [apply H | apply H0 | apply F2MF_tot ].
-	by intros; apply/ rlzr_val_sing; [apply F2MF_sing | apply H | apply H0 | | ].
-split => [ | q' Fqq']; first by have []:= rlzr q a aaq.
-by exists (f a); split => //; apply (rlzr q a aaq).2.
-Qed.
 End realizers.
 Notation "f '\is_realized_by' F" := (rlzr F f) (at level 2).
 Notation "F '\realizes' f" := (rlzr F f) (at level 2).
-Notation "f \is_translation" := (trnsln f) (at level 2).
