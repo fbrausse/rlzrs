@@ -1,8 +1,11 @@
 -R . rlzrs
 ntrvw_base.v
-ntrvw_cncl.v
 ntrvw_rlzr.v
 ntrvw_fnct.v
 ntrvw_func.v
+all_ntrvw.v
+
 dict_base.v
-all_dict.v
+all_rlzrs.v
+
+ntrvw_cncl.v

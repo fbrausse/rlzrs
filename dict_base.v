@@ -1,5 +1,5 @@
 From mathcomp Require Import ssreflect ssrfun.
-Require Import ntrvw_base ntrvw_rlzr ntrvw_fnct.
+Require Import all_ntrvw.
 Import Morphisms.
 Require Import FunctionalExtensionality.
 
