@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import ssreflect ssrfun seq.
 From mpf Require Export all_mpf.
 Import Morphisms.
 
@@ -49,7 +49,7 @@ Canonical sub_interview A (P: mf_subset.type A):= fun_interview A {a: A | P a} (
 
 Context Q (A : interview Q).
 
-Definition comp_conv (D: interview A):= (conversation D) o_R (conversation A).
+Definition comp_conv (D: interview A):= (conversation D) \o_R (conversation A).
 
 Lemma comp_conv_sur (D: interview A): (comp_conv D) \is_cototal.
 Proof.

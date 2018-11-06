@@ -1,4 +1,3 @@
-From mathcomp Require Import all_ssreflect.
 Require Import ntrvw_base.
 
 Set Implicit Arguments.

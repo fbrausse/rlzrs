@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import ssreflect ssrfun.
 Require Import ntrvw_base ntrvw_rlzr ntrvw_fnct.
 Import Morphisms.
 Require Import FunctionalExtensionality.
@@ -80,7 +80,7 @@ Proof. split; exact/list_conv_sing. Defined.
 Canonical dictionary_list := dictionary.Pack list_dictionary_mixin.
 
 Lemma rlzr_spec (F: Q ->> Q') f:
-	F \realizes f <-> ((conversation A') o F) \tightens (f o (conversation A)).
+	F \realizes f <-> ((conversation A') \o F) \tightens (f \o (conversation A)).
 Proof.
 split => [Frf | tight].
 	apply split_tight => q [a' [[a [aaq faa']] subs]].
@@ -93,7 +93,7 @@ split => [Frf | tight].
 	have [d'' [d''aq' fad'']]:= rlzr_val Frf aaq (subs a aaq) Fqq'.
 	by exists a; split => //; rewrite (answer_unique q' d' d'').
 move => q a aaq [a' faa'].
-have qfd: q \from dom (f o (conversation A)).
+have qfd: q \from dom (f \o (conversation A)).
 	exists a'; split => [ | d daq]; first by exists a.
 	by exists a'; rewrite (answer_unique q d a).
 split => [ | q' Fqq'].

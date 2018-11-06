@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import ssreflect ssrfun.
 Require Import ntrvw_base.
 Import Morphisms.
 
@@ -74,7 +74,7 @@ by rewrite (sing a a' d').
 Qed.
 
 Lemma rlzr_comp Q'' (A'': interview Q'') G F (f: A ->> A') (g: A' ->> A''):
-	G \realizes g -> F \realizes f -> (G o F) \realizes (g o f).
+	G \realizes g -> F \realizes f -> (G \o F) \realizes (g \o f).
 Proof.
 move => Grg Frf q a arq [gfa [[fa [fafa gfagfa]]] subs].
 have afd: a \from dom f by exists fa.
