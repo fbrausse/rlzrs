@@ -1,11 +1,12 @@
 -R . rlzrs
-ntrvw_base.v
-ntrvw_rlzr.v
-ntrvw_fnct.v
-ntrvw_func.v
-all_ntrvw.v
 
-dict_base.v
+mf/mf_set.v
+mf/mf.v
+all_mf.v
+mf/classical_mf.v
+mf/choice_mf.v
+
+ntrvw.v
+dict.v
+choice_dict.v
 all_rlzrs.v
-
-ntrvw_cncl.v
