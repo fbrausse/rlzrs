@@ -1,1 +1,1 @@
-Require Export all_mf ntrvw dict.
+Require Export all_ntrvw dict.

@@ -20,7 +20,7 @@ mixin: dictionary_mixin.type A;
 }.
 End dictionary.
 Coercion dictionary.A: dictionary.type >-> interview.type.
-Coercion	dictionary.mixin: dictionary.type >-> dictionary_mixin.type.
+Coercion dictionary.mixin: dictionary.type >-> dictionary_mixin.type.
 Notation dictionary := (dictionary.type).
 Canonical make_modest_set Q (D: interview Q) (mixin: dictionary_mixin.type D) :=
 	dictionary.Pack mixin.
@@ -132,22 +132,3 @@ Proof. exists mf_rlzr; exact rlzr_sur. Defined.
 
 Canonical rlzrs := interview.Pack rlzr_interview_mixin.
 End mf_realizer.
-
-Require Import choice_mf.
-Section mf_rlzr_f.
-Context Q (A: interview Q) Q' (A': dictionary Q').
-
-Definition mf_rlzr_f := make_mf (fun F (f: A -> A') => F \realizes (F2MF f)).
-
-Lemma mf_rlzr_f_sing: mf_rlzr_f \is_singlevalued.
-Proof.
-move => F f g /rlzr_F2MF Frf /rlzr_F2MF Frg.
-apply functional_extensionality => a.
-have [q qna]:= get_question a.
-have [[Fq FqFq] prp]:= Frf q a qna.
-specialize (prp Fq FqFq).
-have [_ prp']:= Frg q a qna.
-specialize (prp' Fq FqFq).
-by rewrite (answer_unique Fq (f a) (g a)).
-Qed.
-End mf_rlzr_f.
