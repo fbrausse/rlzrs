@@ -56,7 +56,7 @@
 (* Some other standardfunctions are given shortcuts like mf_id to avoid lots  *)
 (* of bracketing.                                                             *)
 (******************************************************************************)
-From mathcomp Require Import ssreflect ssrfun.
+From mathcomp Require Import ssreflect ssrfun seq.
 Require Import mf_set.
 Require Import Morphisms.
  
@@ -100,6 +100,34 @@ Proof. done. Qed.
 
 Global Instance F2MF_prpr S T: Proper (@eqfun T S ==> @equiv S T) (@F2MF S T).
 Proof. by move => f g eq s t; rewrite /F2MF /= eq. Qed.
+
+Lemma F2MF_eq S T (f g: S -> T): f =1 g <-> (F2MF f) =~= (F2MF g).
+Proof. by split => [eq s t/= | eq s]; [split => <-; rewrite (eq s) | have ->:= (eq s (f s)).1]. Qed.
+
+Definition PF2MF S T (f: S -> option T): (S ->> T) := make_mf (fun s =>
+match f s with
+	|	None => empty T
+	| Some fs => singleton fs
+end).
+
+Lemma P2MF_spec S T (f: S -> option T) s t: PF2MF f s t <-> f s = Some t.
+Proof. by rewrite /PF2MF; split => /=[ | ->]//; case: (f s)=> // _ ->. Qed.
+
+Global Instance PF2MF_prpr S T: Proper (@eqfun (option T) S ==> @equiv S T) (@PF2MF S T).
+Proof. by move => f g eq s t; rewrite /F2MF /= eq. Qed.
+
+Lemma PF2MF_eq S T (f g: S -> option T): f =1 g <-> PF2MF f =~= PF2MF g.
+Proof.
+split => [eq s /= t | eq s].
+	case E: (f s) => [t' | ]//; case E': (g s) => [t''| ]//; try by move: E'; rewrite -eq E.
+	by split => <-; apply/Some_inj; rewrite -E' -E eq.
+have /=:= eq s; case E: (f s) => [fs | ]; case E': (g s) => [gs | ] // eq'; first by rewrite (eq' fs).1.
+	by have []:= (eq' fs).1.
+by have []:= (eq' gs).2.
+Qed.
+
+Lemma F2MF_PF2MF S T (f: S -> T): F2MF f =~= PF2MF (Some \o f).
+Proof. done. Qed.
 
 Definition inverse S T (f: S ->> T) := make_mf (fun t s => f s t).
 Notation inv f := (inverse f).
@@ -252,13 +280,24 @@ Lemma rcmp_inv R Q Q' (f: Q ->> Q') (g: R ->> Q):
 	(f \o_R g)\^-1 =~= (g\^-1) \o_R (f\^-1).
 Proof. by move => r q'; split; move =>[q []]; exists q. Qed.
 
+Notation "f \o_f g" := (f \o g) (at level 30).
 Lemma rcmp_F2MF R S T (f: S ->> T) (g: R -> S):
-	(f \o_R (F2MF g)) =~= mf.Pack (fun r => f (g r)).
+	(f \o_R (F2MF g)) =~= make_mf (fun r => f (g r)).
 Proof. by move => r t /=; split => [[s [-> fst]] | fgrt]//; exists (g r). Qed.
 
 Lemma F2MF_rcmp_F2MF R S T (f: S -> T) (g: R -> S):
-	(F2MF f \o_R F2MF g) =~= F2MF (fun r => f (g r)).
+	(F2MF f \o_R F2MF g) =~= F2MF (f \o_f g).
 Proof. by move => s t; rewrite rcmp_F2MF /=. Qed.
+
+Notation "f '\o_p' g" := (pcomp f g) (at level 50).
+
+Lemma PF2MF_rcmp_PF2MF R S T (f: S -> option T) (g: R -> option S):
+	(PF2MF f \o_R PF2MF g) =~= PF2MF (f \o_p g).
+Proof.
+move => r t; split => [[s [/=]] | ].
+- by rewrite /pcomp; case: (g r) => //= _ -> ; case: (f s) => // t' <- .
+by rewrite /pcomp/=; case (g r) => // s; exists s.
+Qed.
 
 Lemma rcmp_dom R Q Q' (f: Q ->> Q') (g: R ->> Q):
 	dom (f \o_R g) \is_subset_of dom g.
@@ -288,9 +327,11 @@ Lemma rcmp_id_r S T (f: S ->> T):
 Proof. by move => s t; split => [[t' [-> fst']] | fst]//; exists s. Qed.
 End relational_composition.
 Notation "f '\o_R' g" := (mf_rel_comp f g) (at level 2).
+Notation "f \o_f g" := (f \o g) (at level 30).
+Notation "f '\o_p' g" := (pcomp f g) (at level 50).
+
 
 Section composition.
-Notation "f \o_f g" := (f \o g) (at level 30).
 Definition composition R S T (f : S ->> T) (g : R ->> S) :=
 	make_mf (fun r t => (f \o_R g) r t /\ (g r) \is_subset_of (dom f)).
 Notation "f '\o' g" := (composition f g) (at level 50).
@@ -305,15 +346,30 @@ by move: a => [r stf]; exists r; rewrite (eqf r t) (eqg s r).
 Qed.
 
 Lemma comp_F2MF R S T (f: S ->> T) (g: R -> S):
-	(f \o (F2MF g)) =~= mf.Pack (fun r => f (g r)).
+	(f \o (F2MF g)) =~= make_mf (fun r => f (g r)).
 Proof.
 split => [[[r [/=-> fst]] prop] | fgrt] //.
 by split => [ | r eq]; [exists (g s) | exists s0; rewrite -eq].
 Qed.
 
 Lemma F2MF_comp_F2MF R S T (f: S -> T) (g: R -> S):
-	(F2MF f \o F2MF g) =~= F2MF (fun r => f (g r)).
+	(F2MF f \o F2MF g) =~= F2MF (f \o_f g).
 Proof. by move => s t; rewrite comp_F2MF /=. Qed.
+
+Lemma PF2MF_comp_PF2MF R S T (f: S -> option T) (g: R -> option S):
+	(PF2MF f \o PF2MF g) =~= PF2MF (f \o_p g).
+Proof.
+move => r t.
+split => [[[s [/=]]]].
+case E:  (g r) => // eq.
+case E': (f s) => // eq' _.
+by rewrite /pcomp /obind/oapp E eq E'.
+rewrite /pcomp/obind/oapp/=.
+case E: (g r) => [s | ]//.
+case E': (f s) => // eq.
+split; first by exists s; split => //; rewrite E'.
+by move => k /= <-; exists t; rewrite E'.
+Qed.
 
 Notation "f '\is_section_of' g" := (f \o g =~= F2MF id) (at level 2).
 
@@ -322,6 +378,19 @@ Lemma sec_cncl S T (f: S -> T) g:
 Proof.
 split; last by intros; rewrite comp_F2MF /F2MF => s t; split => <-.
 by move => eq s; move: (eq s s); rewrite (comp_F2MF _ g _ s) /F2MF /= => ->.
+Qed.
+
+Lemma sec_pcncl S T (f: S -> option T) g: (PF2MF f) \is_section_of (F2MF g) <-> pcancel g f.
+Proof.
+split => [sec t | cncl t t']; first by have /=[|[_ [<-]]]//:= (sec t t).2; case E: (f (g t)) => [t'|] // ->.
+rewrite /=; split => [[[_ [<-]]] | <-]; first by rewrite (cncl t).
+by split => [ | _ <- /=]; [exists (g t) | exists t]; rewrite (cncl t).
+Qed.
+
+Lemma sec_ocncl S T (f: S -> T) g: (F2MF f) \is_section_of (PF2MF g) -> ocancel g f.
+Proof.
+rewrite !F2MF_PF2MF PF2MF_comp_PF2MF -PF2MF_eq/pcomp/obind/oapp => sec t.
+by have /=:= sec t; case E: (g t) => [s' | ]// => [[<-]].
 Qed.
 
 Lemma comp_dom R Q Q' (f: Q ->> Q') (g: R ->> Q):
@@ -409,7 +478,6 @@ Proof. by split => //=; move => [[a []]]. Qed.
 Lemma comp_empty_r S T R (f: S ->> T): f \o (@empty_mf R S) =~= (@empty_mf R T).
 Proof. by split => //=; move => [[a []]]. Qed.
 End composition.
-Notation "f \o_f g" := (f \o g) (at level 50).
 Notation "f '\o' g" := (composition f g) (at level 50).
 
 Section totals.
@@ -470,9 +538,31 @@ move => /tot_spec tot s t; split => [ | comp]; first by case.
 by split => //; rewrite tot; exact/ subs_all.
 Qed.
 
+Definition surjective S T:= make_subset (fun (f: S -> T) => 
+	forall t, exists s, f s = t).
+Notation "f '\is_surjective'" := (f \from (surjective _ _)) (at level 30).
+
+Definition psurjective S T := make_subset (fun (f: S -> option T) =>
+	forall t, exists s, f s = some t).
+Notation "f '\is_psurjective'":= (f \from (psurjective _ _)) (at level 30).
+
+Lemma sur_psur (f: S -> T): f \is_surjective <-> (Some \o_f f) \is_psurjective.
+Proof.
+by split => sur t; have [s val]:= sur t; exists s; [rewrite -val | have[]:= val].
+Qed.
+
 Definition cototal S T:= make_subset (fun (f: S ->> T) =>
 	forall t, t \from codom f).
 Notation "f '\is_cototal'" := (f \from (cototal _ _)) (at level 30).
+
+Lemma F2MF_cotot (f: S -> T): f \is_surjective <-> (F2MF f) \is_cototal.
+Proof. done. Qed.
+
+Lemma PF2MF_cotot (f: S -> option T): f \is_psurjective <-> (PF2MF f) \is_cototal.
+Proof.
+split => sur t; first by have [s eq]:= sur t; exists s; rewrite /= eq.
+by have [s /=]:= sur t; case E: (f s) => // eq; exists s; rewrite -eq.
+Qed.
 
 Lemma cotot_spec (f: S ->> T): f \is_cototal <-> codom f === All.
 Proof. by split => ass s; first split => // _; apply/ass. Qed.
@@ -480,9 +570,14 @@ Proof. by split => ass s; first split => // _; apply/ass. Qed.
 Lemma cotot_tot_inv (f: S ->> T):
 	f \is_cototal <-> (f \inverse) \is_total.
 Proof. by rewrite cotot_spec codom_dom_inv tot_spec. Qed.
+
+Global Instance cotot_prpr: Proper (@equiv S T ==> iff) (@cototal S T).
+Proof. by move => f g eq; rewrite cotot_tot_inv eq. Qed.
 End totals.
 Notation "f '\is_total'" := (f \from (total _ _)) (at level 2).
 Notation "f '\is_cototal'" := (f \from (cototal _ _)) (at level 2).
+Notation "f \is_surjective" := (f \from (surjective _ _)) (at level 2).
+Notation "f \is_psurjective":= (f \from (psurjective _ _)) (at level 2).
 
 Section forces.
 Context (S T: Type).
@@ -491,6 +586,11 @@ Definition forces (f: S ->> T) := make_mf (fun s t => forall t', f s t' -> t' = 
 Global Instance frcs_prpr: Proper ((@equiv S T) ==> @equiv S T) (forces).
 Proof. by move => f g eq s t; split => frcs t'; [rewrite -eq | rewrite eq]; exact/frcs. Qed.
 
+Lemma F2MF_frcs (f: S -> T): forces (F2MF f) =~= F2MF f.
+Proof. by move => s t /=; split => [prp | <- t' <-]//; rewrite (prp (f s)). Qed.
+
+(* The same does not hold for PF2MF: PF2MF relates elements outside of the domain to
+all of T. *)
 End forces.
 
 Section singlevalueds.
@@ -518,6 +618,9 @@ Proof. done. Qed.
 Lemma F2MF_sing (f: S-> T): (F2MF f) \is_singlevalued.
 Proof. by move => s t t' H H0; rewrite -H0. Qed.
 
+Lemma PF2MF_sing R R' (f: R -> option R'): (PF2MF f) \is_singlevalued.
+Proof. by move => s t t' /=; case: (f s) => //t'' <- <-. Qed.
+
 Lemma sing_rcmp R Q Q' (f: Q ->> Q') (g: R ->> Q):
 	g \is_singlevalued -> f \o g =~= f \o_R g.
 Proof.
@@ -538,6 +641,19 @@ move => sing fct gct t.
 have [r frt]:= fct t; have [s gsr]:= gct r.
 exists s; split => [ | r' gsr']; first by exists r.
 by rewrite (sing s r' r) => //; exists t.
+Qed.
+
+Lemma comp_sur R (f: R -> T) (g: S -> R):
+	f \is_surjective -> g \is_surjective -> (f \o_f g) \is_surjective.
+Proof.
+by move => sur sur' s; have [r fsr]:= sur s; have [t grt]:= sur' r; exists t; rewrite/= -fsr grt.
+Qed.
+
+Lemma comp_psur R (f: R -> option T) (g: S -> option R):
+	f \is_psurjective -> g \is_psurjective -> (f \o_p g) \is_psurjective.
+Proof.
+move => /PF2MF_cotot cotot /PF2MF_cotot cotot'.
+rewrite PF2MF_cotot -PF2MF_comp_PF2MF; apply/comp_cotot/cotot'/cotot/PF2MF_sing.
 Qed.
 
 Lemma sing_inj_comp_inv R Q Q' (f: Q ->> Q') (g: R ->> Q):
@@ -612,7 +728,7 @@ apply inj.
 by rewrite !comp_empty_l.
 Qed.
 
-(* Classically, being surjective implies being cototal (see file classical_mf.v).
+(* Classically, being an epimorphism implies being cototal (see file classical_mf.v).
 The opposite implication does not hold in general *)
 Lemma cotot_notepi (f: S ->> T) (s: S) (t t': T):
 	~ t = t' -> exists f, f \is_cototal /\ ~ f \is_epi.
@@ -631,26 +747,35 @@ Qed.
 
 (* Again Classically, the inverse is true for singlevalud functions (see classical_mf.v).
 Thus the following is named correctly. *)
-Definition surjective_partial_function := intersection (singlevalued S T) (cototal S T).
+Definition surjective_partial_function:= intersection (singlevalued S T) (cototal S T).
 
-Definition functions := make_subset (fun F => exists (f: S -> T), F2MF f = F).
+Definition functions := make_subset (fun F => exists (f: S -> T), F2MF f =~= F).
 
-Lemma func_spec: functions === codom (F2MF (@F2MF S T)).
-Proof. done. Qed.
-
-Definition surjective_function := make_subset (fun (f: S -> T) => forall t, exists s, f s = t).
+Definition partial_functions:= make_subset (fun (F: S ->> T) => exists f, PF2MF f =~= F).
 End epi_mono.
 Notation "f '\is_mono'" := (f \from (monomorphism _ _)) (at level 2).
 Notation "f '\is_epi'" := (f \from (epimorphism _ _)) (at level 2).
 Notation "f '\is_surjective_partial_function'" := (f \from (surjective_partial_function _ _)) (at level 2).
-Notation "f '\is_surjective_function'" := (f \from (surjective_function _ _)) (at level 2).
+Notation "f '\is_psurjective'" := (f \from (psurjective _ _)) (at level 2).
+Notation "f '\is_surjective'" := (f \from (surjective _ _)) (at level 2).
+Notation "f '\is_function'" := (f \from (functions _ _ )) (at level 2).
+Notation "f '\is_partial_function'":= (f \from (partial_functions _ _)) (at level 2).
 
-Definition exte S T (f g: S ->> T) := forall s, f s \is_subset_of g s.
-Notation "g '\extends' f" := (exte f g) (at level 50).
-Definition mf_exte S T := make_mf (@exte S T).
+Definition extends S T (f g: S ->> T) := forall s, f s \is_subset_of g s.
+Notation "g '\extends' f" := (extends f g) (at level 50).
+Definition mf_exte S T := make_mf (@extends S T).
 Arguments mf_exte {S} {T}.
 
-Global Instance exte_prpr S T: Proper (@equiv S T ==> @equiv S T ==> iff) (@exte S T).
+Definition pextends S T (f g: S -> option T):= forall s t, f s = some t -> g s = some t.
+
+Lemma PF2MF_pexte_PF2MF S T (f g: S -> option T):
+	(PF2MF g) \extends (PF2MF f) <-> pextends f g.
+Proof.
+split => exte s t /=; first by move => E; have /=:= exte s t; rewrite E; case: (g s) => // gs ->.
+by case E: (f s) => [fs | ]// <-; case E': (g s) => [gs | ]//; have := exte _ _ E; rewrite E' //; case.
+Qed.
+
+Global Instance exte_prpr S T: Proper (@equiv S T ==> @equiv S T ==> iff) (@extends S T).
 Proof. by move => f f' feq g g' geq; split => exte s t gst; apply/geq/exte/feq. Qed.
 
 Definition tight S T (g f: S ->> T):=
@@ -710,12 +835,21 @@ Qed.
 Lemma exte_restr (f: S ->> T) P Q: P \is_subset_of Q -> f|_Q \extends f|_P.
 Proof. by move => subs s t []; split => //; apply subs. Qed.
 
+Lemma restr_exte (f g: S ->> T) P P':
+	P \is_subset_of P' -> f|_P' \extends g|_P' -> f|_P \extends g|_P.
+Proof. by move => subs eq s t [Ps gst]; split => //; apply eq; split => //; apply/subs. Qed.
+
+Lemma restr_equiv (f g: S ->> T) P P':
+	P \is_subset_of P' -> f|_P' =~= g|_P' -> f|_P =~= g|_P.
+Proof.
+by rewrite !exte_equiv => subs [exte1 exte2]; split; apply/restr_exte; try apply/subs.
+Qed.
+
 (* tight is almost an equivalence relation, it only fails to be symmetric *)
 Global Instance tight_ref: Reflexive (@tight S T).
 Proof. done. Qed.
 
-Global Instance tight_trans:
-	Transitive (@tight S T).
+Global Instance tight_trans: Transitive (@tight S T).
 Proof.
 move => f g h tight tight'.
 apply /split_tight => [ | s sfd]; first exact/subs_trans/tight_dom/tight'/tight_dom.
@@ -910,8 +1044,13 @@ Context (S T: Type).
 Definition icf S T (g: S -> T) (f: S ->> T) := forall s t, f s t -> f s (g s).
 Notation "g '\is_choice_for' f" := (icf g f) (at level 2).
 
-Lemma icf_F2MF_tight (g: S -> T) f:
-	g \is_choice_for f <-> (F2MF g) \tightens f.
+Definition ipcf S T (g: S -> option T) (f: S ->> T):=
+	forall s t, f s t -> exists t', g s = some t' /\ f s t'.
+
+Notation "g '\is_partial_choice_for' f" := (ipcf g f) (at level 2).
+
+Lemma icf_spec (g: S -> T) f: g \is_choice_for f <->
+	(F2MF g) \tightens f.
 Proof.
 split => [ icf s [] t fst | tight s t fst].
 	by split => [ | gs eq ]; [exists (g s) | rewrite -eq; apply: (icf s t)].
@@ -919,9 +1058,18 @@ have ex: s \from dom f by exists t.
 by apply ((tight s ex).2 (g s)).
 Qed.
 
+Lemma ipcf_spec (g: S -> option T) f: g \is_partial_choice_for f <->
+	(PF2MF g) \tightens f.
+Proof.
+split => [ipcf s [t fst] | tight s t fst].
+	by have [t' [/= -> fst']]:= ipcf s t fst; split => [ | _ <-]; first exists t'.
+have [ |[t' /=]]:= tight s; first by exists t.
+by case: (g s) => // _ -> prp; exists t'; split => //; apply prp.
+Qed.
+
 Global Instance icf_prpr: Proper (@eqfun T S ==> @equiv S T ==> iff) (@icf S T).
 Proof.
-move => f f' fe g g' ge; rewrite !icf_F2MF_tight ge.
+move => f f' fe g g' ge; rewrite !icf_spec ge.
 by have ->: F2MF f =~= F2MF f' by move => s t /=; rewrite (fe s).
 Qed.
 
@@ -937,24 +1085,21 @@ split => [ eq | fst ]; last by rewrite (sing s t (g s)); last by apply (icf s t 
 by have [t' fst']:= (tot s); by rewrite -eq; apply (icf s t').
 Qed.
 
-Lemma icf_comp R f' (f: T ->> R) g' (g: S ->> T):
-	f' \is_choice_for f -> g' \is_choice_for g
-		-> (fun s => f' (g' s)) \is_choice_for (f \o g).
-Proof.
-move => icff icfg s r [[t [gst ftr]] prop].
-split => [ | t' gst']; last exact (prop t' gst'); exists (g' s).
-have gsg's: g s (g' s) by apply/ (icfg s t).
-have [r' fg'sr']:= (prop (g' s) gsg's).
-by split; last apply/ (icff (g' s) r').
-Qed.
-
 Lemma tight_icf (g f: S ->> T):
 	g \tightens f -> forall h, (h \is_choice_for g -> h \is_choice_for f).
-Proof. by move => tight h icf; apply/icf_F2MF_tight/tight_trans/icf_F2MF_tight/icf. Qed.
+Proof. by move => tight h icf; apply/icf_spec/tight_trans/icf_spec/icf. Qed.
 End choice_functions.
 Notation "f '\is_tightened_by' g" := (tight f g) (at level 2).
 Notation "g '\tightens' f" := (tight f g) (at level 2).
 Notation "g '\is_choice_for' f" := (icf g f) (at level 2).
+Notation "g '\is_partial_choice_for' f" := (ipcf g f) (at level 2).
+
+Lemma icf_comp R S T g (f: T ->> R) g' (f': S ->> T):
+	g \is_choice_for f -> g' \is_choice_for f'
+		-> (g \o_f g') \is_choice_for (f \o f').
+Proof.
+by move => icf icf'; rewrite icf_spec -F2MF_comp_F2MF; apply/tight_comp; apply/icf_spec.
+Qed.
 
 Section products.
 Context (S T S' T': Type).
@@ -974,6 +1119,24 @@ Notation "f **_f g" := (fprd f g) (at level 50).
 
 Lemma F2MF_fprd (f: S -> T) (g: S' -> T'): F2MF (f **_f g) =~= (F2MF f) ** (F2MF g).
 Proof. by move => s [t1 t2]; rewrite /fprd/=; split; move => [-> ->]. Qed.
+
+Definition pfprd S T S' T' (f: S -> option T) (g: S' -> option T'):=
+  fun p => match f p.1 with
+          | None => None
+          |Some fp => match g p.2 with
+                     |None => None
+                     |Some gp => Some (fp, gp)
+                     end
+        end.
+Notation "f **_p g" := (pfprd f g) (at level 50).
+
+Lemma PF2MF_fprd (f: S -> option T) (g: S' -> option T'):
+  PF2MF (f **_p g) =~= (PF2MF f) ** (PF2MF g).
+Proof.
+move => s [t1 t2]; rewrite /=/pfprd.
+case: (f s.1) => [fs | ]; case: (g s.2) => [gs | ]; try by split; case.
+by split; case => [-> ->].
+Qed.
 
 Definition fprd_p1 (fg: (S * S') ->> (T * T')) :=
 	make_mf (fun s t => exists s' p, fg (s,s') p /\ p.1 = t).
@@ -1061,6 +1224,7 @@ Qed.
 End products.
 Notation "f '**' g" := (fprd_mf f g) (at level 50).
 Notation "f '**_f' g" := (fprd f g) (at level 50).
+Notation "f '**_p' g" := (pfprd f g) (at level 50).
 
 Section sums.
 Context (S T S' T': Type).
@@ -1078,7 +1242,7 @@ Definition mf_fsum S T S' T' (f : S ->> T) (g : S' ->> T') :=
   end).
 Notation "f +s+ g" := (mf_fsum f g) (at level 50).
 
-Definition	 fsum S T S' T' (f: S -> T) (g: S' -> T') :=
+Definition fsum S T S' T' (f: S -> T) (g: S' -> T') :=
 	fun ss' => match ss' with
 		| inl s => inl (f s)
 		| inr s' => inr (g s')
@@ -1092,8 +1256,38 @@ split; rewrite /F2MF; first by move <-; case s => /=.
 by case: s => /=; case: s0 => //= s t ->.
 Qed.
 
+Definition pfsum S T S' T' (f: S -> option T) (g: S' -> option T') :=
+  fun ss' => match ss' with
+          | inl s => match (f s) with
+                    |None => None
+                    | some fs => Some (inl fs)
+                    end
+          | inr s' => match (g s') with
+                     | None => None
+                     | some gs' => Some (inr gs')
+                     end
+          end.
+Notation "f +s+_p g" := (pfsum f g) (at level 50).
+
+Lemma PF2MF_fsum (f: S -> option T) (g: S' -> option T'):
+  PF2MF (f +s+_p g) =~= (PF2MF f) +s+ (PF2MF g).
+Proof.
+move => s t; rewrite /pfsum /=.
+case: s => [s | s'].
+- case: (f s) => [fs | ]; last by split => //; case: t.
+  by case: t => [t | t'] //; split => [[<-] | <-].
+case: (g s') => [gs' | ]; last by split => //; case: t.
+by case: t => [t | t'] //; split => [[<-] | <-].
+Qed.
+
+Lemma fsum_cotot (f: S ->> T) (g: S' ->> T'):
+  f \is_cototal -> g \is_cototal -> (f +s+ g) \is_cototal.
+Proof.
+by move => sur sur' [t | t']; [have [s]:= sur t; exists (inl s) | have [s']:= sur' t'; exists (inr s')].
+Qed.
+
 Lemma fsum_sing (f: S ->> T) (g: S' ->> T'):
-	f \is_singlevalued -> g \is_singlevalued -> (f +s+ g) \is_singlevalued.
+           f \is_singlevalued -> g \is_singlevalued -> (f +s+ g) \is_singlevalued.
 Proof.
 move => fsing gsing [s [t [r /=fst fsr | r'] | t' [r | r']]| s' [t [r | r'] | t' [r | r' /= gs't' gs'r']]] //.
 	by rewrite (fsing s t r).
@@ -1103,6 +1297,66 @@ Qed.
 End sums.
 Notation "f '+s+' g" := (mf_fsum f g) (at level 50).
 Notation "f '+s+_f' g" := (fsum f g) (at level 50).
+Notation "f '+s+_p' g" := (pfsum f g) (at level 50).
+
+Section lists.
+Fixpoint mf_map_prp S T (f: S ->> T) L K :=  
+  match L with
+  | nil => match K with
+          | nil => True
+          | cons t K' => False
+          end
+  |cons s L' => match K with
+               | nil => False
+               | cons t K' => f s t /\ mf_map_prp f L' K'
+               end
+  end.
+
+Definition mf_map S T (f: S ->> T) := make_mf (mf_map_prp f).
+
+Lemma F2MF_map S T (f: S ->> T): mf_map (F2MF f) =~= F2MF (map f).
+Proof.
+elim => [[] | s L ih [ | t K]] //=.
+split => [[-> prp] | [->]]; first by f_equal; exact/ih/prp.
+by split; last apply/ih.
+Qed.
+
+Fixpoint pmap S T (f: S -> option T) L := match L with
+                                         | nil => Some nil
+                                         | s :: L' => match pmap f L' with
+                                                     | None => None
+                                                     | Some K => match f s with
+                                                                | None => None
+                                                                | Some t => some (t :: K)
+                                                                end
+                                                     end
+                                         end.
+
+Lemma map_pmap S T (f: S -> T): Some \o_f (map f) =1 pmap (Some \o_f f).
+Proof.
+elim => // s L /= ih.
+case E: (pmap (Some \o_f f) L) => [K | ]; first by move: ih; rewrite E; case => ->.
+by move: E; rewrite -ih /=.
+Qed.
+
+Lemma PF2MF_map S T (f: S -> option T): mf_map (PF2MF f) =~= PF2MF (pmap f).
+Proof.
+elim => [[] | s L ih [/= | t K]]//; first by case E: (pmap f L) => [K | ]//; case E': (f s).
+split => [/=[] | /=].
+- by case: (f s) => // _ -> prp; have /= := (ih K).1 prp; case: (pmap f L) => // _ -> .
+case E: (pmap f L) => [K' | ]//.
+by case E': (f s) => [fs | ]// [->  <-]; split; last by apply/ih => /=; rewrite E.
+Qed.
+
+Lemma map_sur S T (f: S ->> T): f \is_cototal -> (mf_map f) \is_cototal.
+Proof.
+move => sur.
+elim => [ | t K [L eq]]; first by exists nil.
+by have [s val]:= sur t; exists (s :: L).
+Qed.
+
+End lists.
+
 
 Section functions.
 Context (S T S' T': Type).
@@ -1129,7 +1383,7 @@ Proof. by move => [s s'] [t t'] /=;split; by move => [-> ->]. Qed.
 Definition mf_fst S T := (F2MF (@fst S T)).
 Arguments mf_fst {S} {T}.
 
-Lemma fprd_fst (f: S ->> T) (g: S' ->> T') : mf_fst \o (f ** g) =~= (f \o mf_fst)|_(All \x dom g).
+Lemma fprd_fst R R' Q Q' (f: R ->> Q) (g: R' ->> Q') : mf_fst \o (f ** g) =~= (f \o mf_fst)|_(All \x dom g).
 Proof.
 move => s t; rewrite comp_F2MF.
 split => [[[[t' t''] [[/= fs1t' gs2t'']]] /=<- _] | [[_ [t' gs2t']] fst]].
@@ -1141,7 +1395,7 @@ Qed.
 Definition mf_snd S T := (F2MF (@snd S T)).
 Arguments mf_snd {S} {T}.
 
-Lemma fprd_snd (f: S ->> T) (g: S' ->> T') : mf_snd \o (f ** g) =~= (g \o mf_snd)|_(dom f \x All).
+Lemma fprd_snd R R' Q Q' (f: R ->> Q) (g: R' ->> Q') : mf_snd \o (f ** g) =~= (g \o mf_snd)|_(dom f \x All).
 Proof.
 move => s t; rewrite comp_F2MF.
 split => [[[[t' t''] [[/= fs1t' gs2t'']]] /=<- _] | [[[t' gs2t'] _] fst]].
@@ -1154,6 +1408,69 @@ Definition diag S := fun (d: S) => (d,d).
 Arguments diag {S}.
 Definition mf_diag S := F2MF (@diag S).
 Arguments mf_diag {S}.
+
+Definition prd_mf R S T (f: R ->> S) (g: R ->> T):= make_mf (fun r st =>
+                                                              f r st.1 /\ g r st.2).
+
+Lemma prd_spec R (f: R ->> S) (g: R ->> T):
+  prd_mf f g =~= (f ** g) \o mf_diag.
+Proof. by rewrite comp_F2MF => r st /=. Qed.
+  
+Definition prd_p R S T (f: R -> option S) (g: R -> option T) r :=
+  match f r with
+  | None => None
+  | Some fr => match g r with
+               | None => None
+               | Some gr => Some (fr, gr)
+               end
+  end.
+
+Lemma PF2MF_comp_F2MF R R' Q (f: R -> R') (g: R' -> option Q):
+  (PF2MF g) \o (F2MF f) =~= PF2MF (g \o_f f).
+Proof.
+rewrite F2MF_PF2MF PF2MF_comp_PF2MF -PF2MF_eq => r /=.
+by rewrite /pcomp/obind /=.
+Qed.
+
+Lemma prd_p_spec R (f: R -> option S) (g: R -> option T):
+  PF2MF (prd_p f g) =~= prd_mf (PF2MF f) (PF2MF g).
+Proof.
+by rewrite prd_spec -PF2MF_fprd PF2MF_comp_F2MF -PF2MF_eq.
+Qed.
+
+Definition prd R S T (f: R -> S) (g: R -> T) r:= (f r, g r).
+
+Lemma prd_f_spec R (f: R -> S) (g: R -> T):
+  F2MF (prd f g) =~= prd_mf (F2MF f) (F2MF g).
+Proof.
+by rewrite prd_spec -F2MF_fprd F2MF_comp_F2MF -F2MF_eq.
+Qed.
+
+Lemma fst_prd R (f: R ->> S) (g: R ->> T):
+  mf_fst \o (prd_mf f g) =~= f|_(dom g).
+Proof.
+rewrite prd_spec -comp_assoc fprd_fst [_ \o mf_fst]comp_F2MF comp_F2MF => s t /=.
+by split => [[[]] | []].
+Qed.
+
+Lemma fst_prd_tot R (f: R ->> S) (g: R ->> T):
+  g \is_total -> mf_fst \o (prd_mf f g) =~= f.
+Proof.  
+by move => /tot_spec tot; rewrite fst_prd tot -restr_all.
+Qed.
+
+Lemma snd_prd R (f: R ->> S) (g: R ->> T):
+  mf_snd \o (prd_mf f g) =~= g|_(dom f).
+Proof.
+rewrite prd_spec -comp_assoc fprd_snd [_ \o mf_snd]comp_F2MF comp_F2MF => s t /=.
+by split => [[[]] | []].
+Qed.
+
+Lemma snd_prd_tot R (f: R ->> S) (g: R ->> T):
+  f \is_total -> mf_snd \o (prd_mf f g) =~= g.
+Proof.
+by move => /tot_spec tot; rewrite snd_prd tot -restr_all.
+Qed.
 
 Lemma tight_fprd_diag (f: S ->> T): (mf_diag \o f) \tightens ((f ** f) \o mf_diag).
 Proof.

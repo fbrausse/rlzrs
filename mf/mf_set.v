@@ -103,6 +103,8 @@ Lemma ntrsct_sym P Q: P \intersects Q <-> Q \intersects P.
 Proof. by split; move => [s []]; exists s. Qed.
 
 Definition intersection (P Q: subset S) := make_subset (fun s => P s /\ Q s).
+
+Definition union T P P':= make_subset (fun (q: T) => P q \/ P' q).
 Notation "P \n Q" := (intersection P Q) (at level 2).
 End mf_subsets.
 Notation "s \from P" := ((P: mf_subset.type _) s) (at level 70).
@@ -110,6 +112,7 @@ Notation "P === Q" := (set_equiv P Q) (at level 50).
 Notation "P '\is_subset_of' Q" := (subs P Q) (at level 50).
 Notation "P '\intersects' Q" := (intersects P Q) (at level 50).
 Notation "P \n Q" := (intersection P Q) (at level 2).
+Notation "P \u Q" := (union P Q) (at level 2).
 Arguments All {S}.
 
 Section products.

@@ -237,7 +237,7 @@ Qed.
 
 Lemma icf_rlzr F (f: A ->> A'):
 	F \realizes f -> forall g, g \is_choice_for F -> (F2MF g) \realizes f.
-Proof. by move => Frf g /icf_F2MF_tight tight; apply/tight_rlzr/tight. Qed.
+Proof. by move => Frf g /icf_spec tight; apply/tight_rlzr/tight. Qed.
 
 Lemma F2MF_rlzr F (f: A ->> A'):
 	(F2MF F) \realizes f <->
