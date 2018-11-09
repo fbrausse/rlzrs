@@ -101,6 +101,18 @@ Proof. done. Qed.
 Global Instance F2MF_prpr S T: Proper (@eqfun T S ==> @equiv S T) (@F2MF S T).
 Proof. by move => f g eq s t; rewrite /F2MF /= eq. Qed.
 
+Definition PF2MF S T (f: S -> option T): (S ->> T) := make_mf (fun s =>
+match f s with
+	|	None => empty T
+	| Some fs => singleton fs
+end).
+
+Lemma P2MF_spec S T (f: S -> option T) s t: PF2MF f s t <-> f s = Some t.
+Proof. by rewrite /PF2MF; split => /=[ | ->]//; case: (f s)=> // _ ->. Qed.
+
+Global Instance PF2MF_prpr S T: Proper (@eqfun (option T) S ==> @equiv S T) (@PF2MF S T).
+Proof. by move => f g eq s t; rewrite /F2MF /= eq. Qed.
+
 Definition inverse S T (f: S ->> T) := make_mf (fun t s => f s t).
 Notation inv f := (inverse f).
 Notation "f '\inverse'" := (inverse f) (at level 50).
@@ -295,6 +307,12 @@ Definition composition R S T (f : S ->> T) (g : R ->> S) :=
 	make_mf (fun r t => (f \o_R g) r t /\ (g r) \is_subset_of (dom f)).
 Notation "f '\o' g" := (composition f g) (at level 50).
 
+Definition pcomposition R S T (f: S -> option T) (g: R -> option S) r := match g r with
+	| None => None
+	| Some gr => f gr
+end.
+Notation "f '\o_p' g" := (pcomposition f g) (at level 50).
+
 Global Instance comp_prpr R S T: Proper ((@equiv S T) ==> (@equiv R S) ==> (@equiv R T)) (@composition R S T).
 Proof.
 move => f f' eqf g g' eqg s t; split; case.
@@ -305,15 +323,30 @@ by move: a => [r stf]; exists r; rewrite (eqf r t) (eqg s r).
 Qed.
 
 Lemma comp_F2MF R S T (f: S ->> T) (g: R -> S):
-	(f \o (F2MF g)) =~= mf.Pack (fun r => f (g r)).
+	(f \o (F2MF g)) =~= make_mf (fun r => f (g r)).
 Proof.
 split => [[[r [/=-> fst]] prop] | fgrt] //.
 by split => [ | r eq]; [exists (g s) | exists s0; rewrite -eq].
 Qed.
 
 Lemma F2MF_comp_F2MF R S T (f: S -> T) (g: R -> S):
-	(F2MF f \o F2MF g) =~= F2MF (fun r => f (g r)).
+	(F2MF f \o F2MF g) =~= F2MF (f \o_f g).
 Proof. by move => s t; rewrite comp_F2MF /=. Qed.
+
+Lemma PF2MF_comp_PF2MF R S T (f: S -> option T) (g: R -> option S):
+	(PF2MF f \o PF2MF g) =~= PF2MF (f \o_p g).
+Proof.
+move => r t.
+split => [[[s [/=]]]].
+case E:  (g r) => // eq.
+case E': (f s) => // eq' _.
+by rewrite /pcomposition E eq E'.
+rewrite /pcomposition/=.
+case E: (g r) => [s | ]//.
+case E': (f s) => // eq.
+split; first by exists s; split => //; rewrite E'.
+by move => k /= <-; exists t; rewrite E'.
+Qed.
 
 Notation "f '\is_section_of' g" := (f \o g =~= F2MF id) (at level 2).
 
@@ -470,9 +503,26 @@ move => /tot_spec tot s t; split => [ | comp]; first by case.
 by split => //; rewrite tot; exact/ subs_all.
 Qed.
 
+Definition surjective S T:= make_subset (fun (f: S -> T) => 
+	forall t, exists s, f s = t).
+Notation "f '\is_surjective'" := (f \from (surjective _ _)) (at level 30).
+
+Definition psurjective S T := make_subset (fun (f: S -> option T) =>
+	forall t, exists s, f s = some t).
+Notation "f '\is_psurjective'":= (f \from (psurjective _ _)) (at level 30).
+
 Definition cototal S T:= make_subset (fun (f: S ->> T) =>
 	forall t, t \from codom f).
 Notation "f '\is_cototal'" := (f \from (cototal _ _)) (at level 30).
+
+Lemma F2MF_cotot (f: S -> T): f \is_surjective <-> (F2MF f) \is_cototal.
+Proof. done. Qed.
+
+Lemma PF2MF_cotot (f: S -> option T): f \is_psurjective <-> (PF2MF f) \is_cototal.
+Proof.
+split => sur t; first by have [s eq]:= sur t; exists s; rewrite /= eq.
+by have [s /=]:= sur t; case E: (f s) => // eq; exists s; rewrite -eq.
+Qed.
 
 Lemma cotot_spec (f: S ->> T): f \is_cototal <-> codom f === All.
 Proof. by split => ass s; first split => // _; apply/ass. Qed.
@@ -517,6 +567,9 @@ Proof. done. Qed.
 
 Lemma F2MF_sing (f: S-> T): (F2MF f) \is_singlevalued.
 Proof. by move => s t t' H H0; rewrite -H0. Qed.
+
+Lemma PF2MF_sing (f: S -> option T): (PF2MF f) \is_singlevalued.
+Proof. by move => s t t' /=; case: (f s) => //t'' <- <-. Qed.
 
 Lemma sing_rcmp R Q Q' (f: Q ->> Q') (g: R ->> Q):
 	g \is_singlevalued -> f \o g =~= f \o_R g.
