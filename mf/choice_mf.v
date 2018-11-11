@@ -23,13 +23,13 @@ case: (classic (s \from dom F)) => [[] t' fst | false]; first by exists t'.
 by exists t => t' fst'; exfalso; apply false; exists t'.
 Qed.
 
-Lemma F2MF_sing_tot (f: S ->> T) (t: T):
-	f \is_singlevalued /\ f \is_total <-> exists g, (F2MF g) =~= f.
+Lemma fun_spec (f: S ->> T) (t: T): f \is_function <->
+	f \is_singlevalued /\ f \is_total.
 Proof.
-split => [ [sing tot] | [g eq]].
-	have [g icf]:= exists_choice f t.
-	exists g; by apply/sing_tot_F2MF_icf.
-by split; rewrite -eq; [apply F2MF_sing | apply F2MF_tot].
+split => [ [g eq] | [sing tot]].
+	by split; rewrite -eq; [apply F2MF_sing | apply F2MF_tot].
+have [g icf]:= exists_choice f t.
+exists g; by apply/sing_tot_F2MF_icf.
 Qed.
 
 Lemma icf_tight (g f: S ->> T): (forall s, exists t', ~ f s t')
@@ -59,11 +59,28 @@ have gtg: g' \tightens g.
 	by have [y gxy]:= xfd; exists y; by split.
 have [h icf']:= (exists_choice g' t).
 have icf: h \is_choice_for g.
-	apply icf_F2MF_tight.
+	apply icf_spec.
 	apply/ tight_trans; first by apply/ gtg.
-	by apply icf_F2MF_tight; apply icf'.
+	by apply icf_spec; apply icf'.
 suffices val: h s = t' by rewrite -val; apply/ (prop h icf s t).
 have val': g s t' /\ (s = s -> t' = t') by split.
 by apply: (icf' s t' val').2.
 Qed.
 End choice_mf.
+
+Lemma pfun_spec S T (f: S ->> T): f \is_partial_function <-> f \is_singlevalued.
+Proof.
+split => [[g <-] | sing]; first exact/PF2MF_sing.
+pose F:= make_mf (fun s t =>
+	(exists t', t = Some t' /\ f s t') \/ (~ s \from dom f /\ t = None)).
+have [g icf]:= exists_choice F None.
+have: F \is_total => [s' | tot].
+	case: (classic (s' \from dom f)) => [[fs' fs'fs'] | neg].
+	by exists (Some (fs')); left; exists fs'.
+	by exists None; right.
+exists g => s t /=; have [fs fsfs]:= tot s.
+case E: (g s) => [gs |].
+	have [[t' []] | []]:= icf s (fs) fsfs; last by rewrite E.
+	by rewrite E => [[<- fsgs]]; split => [<- | fst]//; apply/sing/fst.
+by split => // fst; have [[t' []] | [ndm _]]:= icf s fs fsfs; [rewrite E |apply ndm; exists t].
+Qed.

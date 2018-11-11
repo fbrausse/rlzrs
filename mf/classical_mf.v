@@ -39,7 +39,7 @@ suff nhrs: ~ h r s => //.
 by move => hrs; apply /ncmp; rewrite eq'; apply /comp_rcmp => //; exists s.
 Qed.
 
-Lemma sur_cotot (f: S ->> T): f \is_epi -> f \is_cototal.
+Lemma epi_cotot (f: S ->> T): f \is_epi -> f \is_cototal.
 Proof.
 move => fsur t.
 pose g := make_mf (fun t' b => t = t' /\ b = true).
@@ -53,10 +53,10 @@ case: (classic (g t true)) => ass; last by apply ass.
 by case: ((eq t true).1 ass).
 Qed.
 
-Lemma sing_cotot_sur (f: S ->> T):
+Lemma cotot_epi (f: S ->> T):
 f \is_singlevalued -> (f \is_cototal <-> f \is_epi).
 Proof.
-split => [fcotot Q g h eq t q| ]; last exact: sur_cotot.
+split => [fcotot Q g h eq t q| ]; last exact: epi_cotot.
 split => ass; move: (fcotot t) => [] s fst.
 	suffices gfsq: (g \o f) s q.
 		by move: ((eq s q).1 gfsq) => [] [] t' [] fst'; rewrite (H s t t').
@@ -67,16 +67,6 @@ by move: ((eq s q).2 hfsq) => [] [] t' [] fst'; rewrite (H s t t').
 Qed.
 
 Lemma sur_fun_sur (f: S -> T):
-	f \is_surjective_function <-> (F2MF f) \is_epi.
-Proof.
-split => sur.
-	move => R g h.
-	rewrite !comp_F2MF => eq s t.
-	have [r <-]:= sur s.
-	exact: (eq r t).
-move => t.
-have cotot: (F2MF f) \is_cototal by apply sur_cotot.
-have [s fst]:= cotot t.
-by exists s.
-Qed.
+	f \is_surjective <-> (F2MF f) \is_epi.
+Proof. rewrite F2MF_cotot -cotot_epi//; exact/F2MF_sing. Qed.
 End classical_mf.
