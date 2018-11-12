@@ -391,6 +391,12 @@ rewrite /=; split => [[[_ [<-]]] | <-]; first by rewrite (cncl t).
 by split => [ | _ <- /=]; [exists (g t) | exists t]; rewrite (cncl t).
 Qed.
 
+Lemma sec_ocncl S T (f: S -> T) g: (F2MF f) \is_section_of (PF2MF g) -> ocancel g f.
+Proof.
+rewrite !F2MF_PF2MF PF2MF_comp_PF2MF -PF2MF_eq/pcomposition => sec t.
+by have /=:= sec t; case E: (g t) => [s' | ]// => [[<-]].
+Qed.
+
 Lemma comp_dom R Q Q' (f: Q ->> Q') (g: R ->> Q):
 	dom (f \o g) \is_subset_of dom g.
 Proof. by move => r [s [[t[]]]]; exists t. Qed.
@@ -1103,6 +1109,24 @@ Notation "f **_f g" := (fprd f g) (at level 50).
 Lemma F2MF_fprd (f: S -> T) (g: S' -> T'): F2MF (f **_f g) =~= (F2MF f) ** (F2MF g).
 Proof. by move => s [t1 t2]; rewrite /fprd/=; split; move => [-> ->]. Qed.
 
+Definition pfprd S T S' T' (f: S -> option T) (g: S' -> option T'):=
+  fun p => match f p.1 with
+          | None => None
+          |Some fp => match g p.2 with
+                     |None => None
+                     |Some gp => Some (fp, gp)
+                     end
+        end.
+Notation "f **_p g" := (pfprd f g) (at level 50).
+
+Lemma PF2MF_fprd (f: S -> option T) (g: S' -> option T'):
+  PF2MF (f **_p g) =~= (PF2MF f) ** (PF2MF g).
+Proof.
+move => s [t1 t2]; rewrite /=/pfprd.
+case: (f s.1) => [fs | ]; case: (g s.2) => [gs | ]; try by split; case.
+by split; case => [-> ->].
+Qed.
+
 Definition fprd_p1 (fg: (S * S') ->> (T * T')) :=
 	make_mf (fun s t => exists s' p, fg (s,s') p /\ p.1 = t).
 
@@ -1206,7 +1230,7 @@ Definition mf_fsum S T S' T' (f : S ->> T) (g : S' ->> T') :=
   end).
 Notation "f +s+ g" := (mf_fsum f g) (at level 50).
 
-Definition	 fsum S T S' T' (f: S -> T) (g: S' -> T') :=
+Definition fsum S T S' T' (f: S -> T) (g: S' -> T') :=
 	fun ss' => match ss' with
 		| inl s => inl (f s)
 		| inr s' => inr (g s')
@@ -1220,8 +1244,32 @@ split; rewrite /F2MF; first by move <-; case s => /=.
 by case: s => /=; case: s0 => //= s t ->.
 Qed.
 
+Definition pfsum S T S' T' (f: S -> option T) (g: S' -> option T') :=
+  fun ss' => match ss' with
+          | inl s => match (f s) with
+                    |None => None
+                    | some fs => Some (inl fs)
+                    end
+          | inr s' => match (g s') with
+                     | None => None
+                     | some gs' => Some (inr gs')
+                     end
+          end.
+Notation "f +s+_p g" := (pfsum f g) (at level 50).
+
+Lemma PF2MF_fsum (f: S -> option T) (g: S' -> option T'):
+  PF2MF (f +s+_p g) =~= (PF2MF f) +s+ (PF2MF g).
+Proof.
+move => s t; rewrite /pfsum /=.
+case: s => [s | s'].
+- case: (f s) => [fs | ]; last by split => //; case: t.
+  by case: t => [t | t'] //; split => [[<-] | <-].
+case: (g s') => [gs' | ]; last by split => //; case: t.
+by case: t => [t | t'] //; split => [[<-] | <-].
+Qed.
+
 Lemma fsum_sing (f: S ->> T) (g: S' ->> T'):
-	f \is_singlevalued -> g \is_singlevalued -> (f +s+ g) \is_singlevalued.
+           f \is_singlevalued -> g \is_singlevalued -> (f +s+ g) \is_singlevalued.
 Proof.
 move => fsing gsing [s [t [r /=fst fsr | r'] | t' [r | r']]| s' [t [r | r'] | t' [r | r' /= gs't' gs'r']]] //.
 	by rewrite (fsing s t r).
