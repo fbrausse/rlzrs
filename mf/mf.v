@@ -289,18 +289,14 @@ Lemma F2MF_rcmp_F2MF R S T (f: S -> T) (g: R -> S):
 	(F2MF f \o_R F2MF g) =~= F2MF (f \o_f g).
 Proof. by move => s t; rewrite rcmp_F2MF /=. Qed.
 
-Definition pcomposition R S T (f: S -> option T) (g: R -> option S) r := match g r with
-	| None => None
-	| Some gr => f gr
-end.
-Notation "f '\o_p' g" := (pcomposition f g) (at level 50).
+Notation "f '\o_p' g" := (pcomp f g) (at level 50).
 
 Lemma PF2MF_rcmp_PF2MF R S T (f: S -> option T) (g: R -> option S):
 	(PF2MF f \o_R PF2MF g) =~= PF2MF (f \o_p g).
 Proof.
 move => r t; split => [[s [/=]] | ].
-	by rewrite /pcomposition; case: (g r) => // _ ->; case (f s) => // <-.
-by rewrite /pcomposition/=; case (g r) => // s; exists s.
+- by rewrite /pcomp; case: (g r) => //= _ -> ; case: (f s) => // t' <- .
+by rewrite /pcomp/=; case (g r) => // s; exists s.
 Qed.
 
 Lemma rcmp_dom R Q Q' (f: Q ->> Q') (g: R ->> Q):
@@ -332,7 +328,7 @@ Proof. by move => s t; split => [[t' [-> fst']] | fst]//; exists s. Qed.
 End relational_composition.
 Notation "f '\o_R' g" := (mf_rel_comp f g) (at level 2).
 Notation "f \o_f g" := (f \o g) (at level 30).
-Notation "f '\o_p' g" := (pcomposition f g) (at level 50).
+Notation "f '\o_p' g" := (pcomp f g) (at level 50).
 
 
 Section composition.
@@ -367,8 +363,8 @@ move => r t.
 split => [[[s [/=]]]].
 case E:  (g r) => // eq.
 case E': (f s) => // eq' _.
-by rewrite /pcomposition E eq E'.
-rewrite /pcomposition/=.
+by rewrite /pcomp /obind/oapp E eq E'.
+rewrite /pcomp/obind/oapp/=.
 case E: (g r) => [s | ]//.
 case E': (f s) => // eq.
 split; first by exists s; split => //; rewrite E'.
@@ -393,7 +389,7 @@ Qed.
 
 Lemma sec_ocncl S T (f: S -> T) g: (F2MF f) \is_section_of (PF2MF g) -> ocancel g f.
 Proof.
-rewrite !F2MF_PF2MF PF2MF_comp_PF2MF -PF2MF_eq/pcomposition => sec t.
+rewrite !F2MF_PF2MF PF2MF_comp_PF2MF -PF2MF_eq/pcomp/obind/oapp => sec t.
 by have /=:= sec t; case E: (g t) => [s' | ]// => [[<-]].
 Qed.
 
@@ -549,6 +545,11 @@ Notation "f '\is_surjective'" := (f \from (surjective _ _)) (at level 30).
 Definition psurjective S T := make_subset (fun (f: S -> option T) =>
 	forall t, exists s, f s = some t).
 Notation "f '\is_psurjective'":= (f \from (psurjective _ _)) (at level 30).
+
+Lemma sur_psur (f: S -> T): f \is_surjective <-> (Some \o_f f) \is_psurjective.
+Proof.
+by split => sur t; have [s val]:= sur t; exists s; [rewrite -val | have[]:= val].
+Qed.
 
 Definition cototal S T:= make_subset (fun (f: S ->> T) =>
 	forall t, t \from codom f).
@@ -1213,6 +1214,7 @@ Qed.
 End products.
 Notation "f '**' g" := (fprd_mf f g) (at level 50).
 Notation "f '**_f' g" := (fprd f g) (at level 50).
+Notation "f '**_p' g" := (pfprd f g) (at level 50).
 
 Section sums.
 Context (S T S' T': Type).
@@ -1268,6 +1270,12 @@ case: (g s') => [gs' | ]; last by split => //; case: t.
 by case: t => [t | t'] //; split => [[<-] | <-].
 Qed.
 
+Lemma fsum_cotot (f: S ->> T) (g: S' ->> T'):
+  f \is_cototal -> g \is_cototal -> (f +s+ g) \is_cototal.
+Proof.
+by move => sur sur' [t | t']; [have [s]:= sur t; exists (inl s) | have [s']:= sur' t'; exists (inr s')].
+Qed.
+
 Lemma fsum_sing (f: S ->> T) (g: S' ->> T'):
            f \is_singlevalued -> g \is_singlevalued -> (f +s+ g) \is_singlevalued.
 Proof.
@@ -1279,6 +1287,7 @@ Qed.
 End sums.
 Notation "f '+s+' g" := (mf_fsum f g) (at level 50).
 Notation "f '+s+_f' g" := (fsum f g) (at level 50).
+Notation "f '+s+_p' g" := (pfsum f g) (at level 50).
 
 Section functions.
 Context (S T S' T': Type).
