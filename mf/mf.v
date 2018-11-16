@@ -56,7 +56,7 @@
 (* Some other standardfunctions are given shortcuts like mf_id to avoid lots  *)
 (* of bracketing.                                                             *)
 (******************************************************************************)
-From mathcomp Require Import ssreflect ssrfun.
+From mathcomp Require Import ssreflect ssrfun seq.
 Require Import mf_set.
 Require Import Morphisms.
  
@@ -1288,6 +1288,65 @@ End sums.
 Notation "f '+s+' g" := (mf_fsum f g) (at level 50).
 Notation "f '+s+_f' g" := (fsum f g) (at level 50).
 Notation "f '+s+_p' g" := (pfsum f g) (at level 50).
+
+Section lists.
+Fixpoint mf_map_prp S T (f: S ->> T) L K :=  
+  match L with
+  | nil => match K with
+          | nil => True
+          | cons t K' => False
+          end
+  |cons s L' => match K with
+               | nil => False
+               | cons t K' => f s t /\ mf_map_prp f L' K'
+               end
+  end.
+
+Definition mf_map S T (f: S ->> T) := make_mf (mf_map_prp f).
+
+Lemma F2MF_map S T (f: S ->> T): mf_map (F2MF f) =~= F2MF (map f).
+Proof.
+elim => [[] | s L ih [ | t K]] //=.
+split => [[-> prp] | [->]]; first by f_equal; exact/ih/prp.
+by split; last apply/ih.
+Qed.
+
+Fixpoint pmap S T (f: S -> option T) L := match L with
+                                         | nil => Some nil
+                                         | s :: L' => match pmap f L' with
+                                                     | None => None
+                                                     | Some K => match f s with
+                                                                | None => None
+                                                                | Some t => some (t :: K)
+                                                                end
+                                                     end
+                                         end.
+
+Lemma map_pmap S T (f: S -> T): Some \o_f (map f) =1 pmap (Some \o_f f).
+Proof.
+elim => // s L /= ih.
+case E: (pmap (Some \o_f f) L) => [K | ]; first by move: ih; rewrite E; case => ->.
+by move: E; rewrite -ih /=.
+Qed.
+
+Lemma PF2MF_map S T (f: S -> option T): mf_map (PF2MF f) =~= PF2MF (pmap f).
+Proof.
+elim => [[] | s L ih [/= | t K]]//; first by case E: (pmap f L) => [K | ]//; case E': (f s).
+split => [/=[] | /=].
+- by case: (f s) => // _ -> prp; have /= := (ih K).1 prp; case: (pmap f L) => // _ -> .
+case E: (pmap f L) => [K' | ]//.
+by case E': (f s) => [fs | ]// [->  <-]; split; last by apply/ih => /=; rewrite E.
+Qed.
+
+Lemma map_sur S T (f: S ->> T): f \is_cototal -> (mf_map f) \is_cototal.
+Proof.
+move => sur.
+elim => [ | t K [L eq]]; first by exists nil.
+by have [s val]:= sur t; exists (s :: L).
+Qed.
+
+End lists.
+
 
 Section functions.
 Context (S T S' T': Type).
