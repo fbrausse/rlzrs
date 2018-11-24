@@ -1373,7 +1373,7 @@ Proof. by move => [s s'] [t t'] /=;split; by move => [-> ->]. Qed.
 Definition mf_fst S T := (F2MF (@fst S T)).
 Arguments mf_fst {S} {T}.
 
-Lemma fprd_fst (f: S ->> T) (g: S' ->> T') : mf_fst \o (f ** g) =~= (f \o mf_fst)|_(All \x dom g).
+Lemma fprd_fst R R' Q Q' (f: R ->> Q) (g: R' ->> Q') : mf_fst \o (f ** g) =~= (f \o mf_fst)|_(All \x dom g).
 Proof.
 move => s t; rewrite comp_F2MF.
 split => [[[[t' t''] [[/= fs1t' gs2t'']]] /=<- _] | [[_ [t' gs2t']] fst]].
@@ -1385,7 +1385,7 @@ Qed.
 Definition mf_snd S T := (F2MF (@snd S T)).
 Arguments mf_snd {S} {T}.
 
-Lemma fprd_snd (f: S ->> T) (g: S' ->> T') : mf_snd \o (f ** g) =~= (g \o mf_snd)|_(dom f \x All).
+Lemma fprd_snd R R' Q Q' (f: R ->> Q) (g: R' ->> Q') : mf_snd \o (f ** g) =~= (g \o mf_snd)|_(dom f \x All).
 Proof.
 move => s t; rewrite comp_F2MF.
 split => [[[[t' t''] [[/= fs1t' gs2t'']]] /=<- _] | [[[t' gs2t'] _] fst]].
@@ -1398,6 +1398,69 @@ Definition diag S := fun (d: S) => (d,d).
 Arguments diag {S}.
 Definition mf_diag S := F2MF (@diag S).
 Arguments mf_diag {S}.
+
+Definition prd_mf R S T (f: R ->> S) (g: R ->> T):= make_mf (fun r st =>
+                                                              f r st.1 /\ g r st.2).
+
+Lemma prd_spec R (f: R ->> S) (g: R ->> T):
+  prd_mf f g =~= (f ** g) \o mf_diag.
+Proof. by rewrite comp_F2MF => r st /=. Qed.
+  
+Definition prd_p R S T (f: R -> option S) (g: R -> option T) r :=
+  match f r with
+  | None => None
+  | Some fr => match g r with
+               | None => None
+               | Some gr => Some (fr, gr)
+               end
+  end.
+
+Lemma PF2MF_comp_F2MF R R' Q (f: R -> R') (g: R' -> option Q):
+  (PF2MF g) \o (F2MF f) =~= PF2MF (g \o_f f).
+Proof.
+rewrite F2MF_PF2MF PF2MF_comp_PF2MF -PF2MF_eq => r /=.
+by rewrite /pcomp/obind /=.
+Qed.
+
+Lemma prd_p_spec R (f: R -> option S) (g: R -> option T):
+  PF2MF (prd_p f g) =~= prd_mf (PF2MF f) (PF2MF g).
+Proof.
+by rewrite prd_spec -PF2MF_fprd PF2MF_comp_F2MF -PF2MF_eq.
+Qed.
+
+Definition prd R S T (f: R -> S) (g: R -> T) r:= (f r, g r).
+
+Lemma prd_f_spec R (f: R -> S) (g: R -> T):
+  F2MF (prd f g) =~= prd_mf (F2MF f) (F2MF g).
+Proof.
+by rewrite prd_spec -F2MF_fprd F2MF_comp_F2MF -F2MF_eq.
+Qed.
+
+Lemma fst_prd R (f: R ->> S) (g: R ->> T):
+  mf_fst \o (prd_mf f g) =~= f|_(dom g).
+Proof.
+rewrite prd_spec -comp_assoc fprd_fst [_ \o mf_fst]comp_F2MF comp_F2MF => s t /=.
+by split => [[[]] | []].
+Qed.
+
+Lemma fst_prd_tot R (f: R ->> S) (g: R ->> T):
+  g \is_total -> mf_fst \o (prd_mf f g) =~= f.
+Proof.  
+by move => /tot_spec tot; rewrite fst_prd tot -restr_all.
+Qed.
+
+Lemma snd_prd R (f: R ->> S) (g: R ->> T):
+  mf_snd \o (prd_mf f g) =~= g|_(dom f).
+Proof.
+rewrite prd_spec -comp_assoc fprd_snd [_ \o mf_snd]comp_F2MF comp_F2MF => s t /=.
+by split => [[[]] | []].
+Qed.
+
+Lemma snd_prd_tot R (f: R ->> S) (g: R ->> T):
+  f \is_total -> mf_snd \o (prd_mf f g) =~= g.
+Proof.
+by move => /tot_spec tot; rewrite snd_prd tot -restr_all.
+Qed.
 
 Lemma tight_fprd_diag (f: S ->> T): (mf_diag \o f) \tightens ((f ** f) \o mf_diag).
 Proof.
