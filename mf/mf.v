@@ -835,6 +835,16 @@ Qed.
 Lemma exte_restr (f: S ->> T) P Q: P \is_subset_of Q -> f|_Q \extends f|_P.
 Proof. by move => subs s t []; split => //; apply subs. Qed.
 
+Lemma restr_exte (f g: S ->> T) P P':
+	P \is_subset_of P' -> f|_P' \extends g|_P' -> f|_P \extends g|_P.
+Proof. by move => subs eq s t [Ps gst]; split => //; apply eq; split => //; apply/subs. Qed.
+
+Lemma restr_equiv (f g: S ->> T) P P':
+	P \is_subset_of P' -> f|_P' =~= g|_P' -> f|_P =~= g|_P.
+Proof.
+by rewrite !exte_equiv => subs [exte1 exte2]; split; apply/restr_exte; try apply/subs.
+Qed.
+
 (* tight is almost an equivalence relation, it only fails to be symmetric *)
 Global Instance tight_ref: Reflexive (@tight S T).
 Proof. done. Qed.
